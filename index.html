@@ -3,37 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Space game</title>
+    <title>Arcade Space Galaxy Gauntlet</title>
     <style>
-        body { background: #020208; color: #00ffcc; font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; padding: 10px; }
-        .arcade-cabinet { max-width: 480px; margin: 5px auto; background: #0b0c16; padding: 15px; border: 3px solid #00ffcc; box-shadow: 0 0 20px #00ffcc; border-radius: 8px; }
-        
-        /* High-Performance Canvas Viewport */
-        #space-canvas { background: #000003; display: block; margin: 10px auto; border: 2px solid #333; box-shadow: inset 0 0 20px #000; }
-        
-        .hud-display { display: flex; justify-content: space-between; background: #111424; padding: 8px; border: 1px solid #00ffcc; font-size: 13px; font-weight: bold; }
-        .btn-play { background: #ff00ff; color: white; border: 2px solid white; padding: 10px 25px; font-size: 14px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; margin-top: 5px; box-shadow: 0 0 10px #ff00ff; }
-        .btn-play:hover { background: #00ffcc; color: black; box-shadow: 0 0 15px #00ffcc; }
+        body { background: #03030c; color: #00ffff; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
+        .arcade-cabinet { max-width: 500px; margin: 5px auto; background: #0c0d1a; padding: 15px; border: 3px solid #00ffff; box-shadow: 0 0 20px #00ffff; border-radius: 6px; }
+        #space-canvas { background: #000005; display: block; margin: 10px auto; border: 2px solid #222; }
+        .hud-display { display: flex; justify-content: space-between; background: #121528; padding: 10px; border: 1px solid #00ffff; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        .ability-meter { background: #222; width: 100%; height: 12px; border: 1px solid #ff00ff; position: relative; margin-bottom: 8px; }
+        #ability-fill { background: #ff00ff; height: 100%; width: 0%; transition: width 0.1s; }
+        .ability-txt { position: absolute; width: 100%; text-align: center; font-size: 9px; color: #fff; font-weight: bold; line-height: 12px; }
+        .btn-play { background: #ff00ff; color: white; border: 2px solid white; padding: 12px 30px; font-size: 14px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; box-shadow: 0 0 10px #ff00ff; }
+        .btn-play:hover { background: #00ffff; color: black; box-shadow: 0 0 15px #00ffff; }
     </style>
 </head>
 <body>
 
 <div class="arcade-cabinet">
-    <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #00ffcc;">☄️ COSMIC INTERCEPTOR ☄️</div>
+    <div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #00ffff;">🛸 GALAXY SHOWDOWN 🛸</div>
     
-    <!-- Real-time HUD stats -->
+    <!-- Real-time HUD status metrics tracking data slots -->
     <div class="hud-display">
-        <div>THREAT PHASE: <span id="threat-lbl" style="color:#ffff00;">1</span></div>
+        <div id="target-ui" style="color:#ff3333;">OBJECTIVE: CLEAR DRONES</div>
         <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
         <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
-    <!-- The Active Graphics Canvas -->
-    <canvas id="space-canvas" width="440" height="360"></canvas>
+    <!-- Special ultimate laser charge dashboard configuration tracking panel -->
+    <div class="ability-meter">
+        <div id="ability-fill"></div>
+        <div class="ability-txt">MEGA LASER CHARGE: <span id="charge-lbl">0%</span> [READY AT 100%]</div>
+    </div>
+
+    <!-- High-Performance Canvas Viewport -->
+    <canvas id="space-canvas" width="460" height="380"></canvas>
 
     <button class="btn-play" onclick="startSpaceGame()">LAUNCH STRF-01</button>
-    <div style="font-size: 11px; color: #667799; margin-top: 8px; font-weight: bold;">
-        CONTROLS: Use [◀ LEFT] & [RIGHT ▶] Arrow Keys to Fly. Press [SPACEBAR] to Fire Lasers!
+    <div style="font-size: 11px; color: #667799; margin-top: 8px; font-weight: bold; line-height: 14px;">
+        FLIGHT: [◀ LEFT / RIGHT ▶] Arrow Keys | PRIMARY FIRE: [SPACEBAR]<br>
+        <span style="color:#ff00ff;">SPECIAL ULTIMATE ABILITY: Press [SHIFT KEY] to unleash Mega Laser!</span>
     </div>
 </div>
 
@@ -41,161 +48,159 @@
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
-    // Engine Core Variables
-    let gameRunning = false, score = 0, playerHp = 100, currentPhase = 1;
-    let playerX = 200, playerSpeed = 7;
+    // Engine Core Settings Configuration Maps
+    let gameRunning = false, score = 0, playerHp = 100, currentPhase = 0;
+    let playerX = 210, playerSpeed = 7;
     let keysPressed = {};
-    let laserMagazine = [], alienSwarm = [];
-    let enemySpawnTimer = 0, enemySpeedMultiplier = 2;
+    let standardLasers = [], enemyUnits = [];
+    let enemySpawnTimer = 0, abilityCharge = 0;
+    
+    // Boss Core Mechanics Engine Integration Fields
+    let bossActive = false, bossX = 180, bossY = -60, bossHp = 2000, maxBossHp = 2000, bossDirection = 1;
+    let specialLaserActive = false, specialLaserTimer = 0;
 
-    // Keyboard Listener Triggers
-    window.addEventListener('keydown', (e) => { keysPressed[e.code] = true; if(e.code === "Space" && gameRunning) fireLaserBeam(); });
+    const bossPhases = {
+        1: { name: "Doom Vanguard", color: "#ff3333", emoji: "🛸" },
+        2: { name: "Dread Carrier", color: "#ff6600", emoji: "🛰️" },
+        3: { name: "Void Swarm-Lord", color: "#ffcc00", emoji: "👾" },
+        4: { name: "Singularity Core", color: "#cc00cc", emoji: "🌀" },
+        5: { name: "Eclipse Devourer", color: "#9900cc", emoji: "🌌" },
+        6: { name: "Ion Obliterator", color: "#3333ff", emoji: "🖲️" },
+        7: { name: "Nebula Ravager", color: "#00ffff", emoji: "💫" },
+        8: { name: "Hyperion Citadel", color: "#00ff66", emoji: "🏰" },
+        9: { name: "Chaos Sovereign", color: "#ffffff", emoji: "🪐" },
+        10: { name: "Omega Doomsday Weapon", color: "#ff00ff", emoji: "💀" }
+    };
+
+    // Keyboard Tracking Input Pipeline Hooks
+    window.addEventListener('keydown', (e) => { 
+        keysPressed[e.code] = true; 
+        if (e.code === "Space" && gameRunning) firePrimaryWeapon();
+        if (e.code === "ShiftLeft" || e.code === "ShiftRight") fireSpecialMegaLaser();
+    });
     window.addEventListener('keyup', (e) => { keysPressed[e.code] = false; });
 
     function startSpaceGame() {
-        // Reset state variables definitions
-        score = 0; playerHp = 100; currentPhase = 1; enemySpeedMultiplier = 2; playerX = 200;
-        laserMagazine = []; alienSwarm = [];
+        score = 0; playerHp = 100; currentPhase = 0; playerX = 210; abilityCharge = 0;
+        standardLasers = []; enemyUnits = [];
+        bossActive = false; bossY = -60; bossHp = 2000; maxBossHp = 2000; specialLaserActive = false;
         gameRunning = true;
         
         document.getElementById('score-lbl').innerText = score;
         document.getElementById('hull-lbl').innerText = playerHp + "%";
-        document.getElementById('threat-lbl').innerText = currentPhase;
+        document.getElementById('target-ui').innerText = "OBJECTIVE: CLEAR DRONES";
+        document.getElementById('target-ui').style.color = "#ff3333";
         
-        // Execute graphics render engine pathway frame loops
         requestAnimationFrame(runGameEngineLoop);
     }
 
-    function fireLaserBeam() {
-        // Instantiate real projectile vector coordinates
-        laserMagazine.push({ x: playerX + 18, y: 320, speed: 8 });
+    function firePrimaryWeapon() {
+        standardLasers.push({ x: playerX + 14, y: 340, speed: 9 });
     }
 
-    function spawnAlienUnit() {
-        // Calculate random generation coordinate slots
-        const spawnX = Math.floor(Math.random() * (canvas.width - 30));
-        let typeChance = Math.random();
-        let entitySymbol = "🛸";
-        let isHeavy = false;
+    function fireSpecialMegaLaser() {
+        if (abilityCharge < 100 || !gameRunning) return;
+        abilityCharge = 0;
+        specialLaserActive = true;
+        specialLaserTimer = 40; // Laser lasts for 40 animation frames
+    }
 
-        if (typeChance > 0.8 && currentPhase >= 3) {
-            entitySymbol = "🛰️"; // Heavy armored alien node
-            isHeavy = true;
-        } else if (typeChance < 0.15 && currentPhase >= 6) {
-            entitySymbol = "👾"; // Elite flagship drone
-        }
-
-        alienSwarm.push({ x: spawnX, y: -20, speed: (Math.random() * 1.5 + 1) * enemySpeedMultiplier, unit: entitySymbol, heavy: isHeavy });
+    function spawnDroneItem() {
+        if (bossActive) return; // Stop random spawns during Boss Stage confrontation
+        const randX = Math.floor(Math.random() * (canvas.width - 30));
+        enemyUnits.push({ x: randX, y: -20, speed: Math.random() * 1.5 + 2, symbol: "🛸" });
     }
 
     function runGameEngineLoop() {
         if (!gameRunning) return;
 
-        // Clear viewscreen buffer frame step clears
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Render ambient scrolling space grid background stars
-        ctx.fillStyle = "rgba(255,255,255,0.15)";
-        for(let i=0; i<15; i++) {
-            let starY = (Date.now() / 10 + i * 45) % canvas.height;
-            ctx.fillRect((i * 37) % canvas.width, starY, 2, 2);
+        // Ambient Background Stars
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        for (let i = 0; i < 12; i++) {
+            let starVelocityY = (Date.now() / 8 + i * 50) % canvas.height;
+            ctx.fillRect((i * 41) % canvas.width, starVelocityY, 2, 2);
         }
 
-        // Process player structural motion pathings ticks
+        // Structural Fighter Tracking Movements Motion
         if (keysPressed['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
-        if (keysPressed['ArrowRight'] && playerX < canvas.width - 45) playerX += playerSpeed;
+        if (keysPressed['ArrowRight'] && playerX < canvas.width - 40) playerX += playerSpeed;
 
-        // Draw Player Starfighter Sprite Model
-        ctx.font = "32px Arial";
-        ctx.fillText("🚀", playerX, 345);
+        // Render Hero Starfighter Sprite
+        ctx.font = "28px Arial";
+        ctx.fillText("🚀", playerX, 365);
 
-        // Process and Render Player Weapon Laser Cells Arrays
-        ctx.fillStyle = "#00ffcc";
-        for (let l = laserMagazine.length - 1; l >= 0; l--) {
-            let beam = laserMagazine[l];
-            beam.y -= beam.speed;
-            ctx.fillRect(beam.x, beam.y, 4, 12);
+        // Energy Special Ability Meter Charge Tick updates
+        if (abilityCharge < 100) {
+            abilityCharge += 0.15; // Slow increments over framework ticks
+            if (abilityCharge > 100) abilityCharge = 100;
+            document.getElementById('ability-fill').style.width = abilityCharge + "%";
+            document.getElementById('charge-lbl').innerText = Math.floor(abilityCharge) + "%";
+        }
+
+        // Render Active Special Ultimate Mega Laser if deployed
+        if (specialLaserActive) {
+            specialLaserTimer--;
+            ctx.fillStyle = "rgba(255, 0, 255, 0.75)";
+            // Fires an immensely broad piercing energy core line block up the screen
+            ctx.fillRect(playerX - 10, 0, 55, 340);
             
-            // Delete out-of-bounds index nodes sweeps
-            if (beam.y < 0) laserMagazine.splice(l, 1);
+            // Neon accent inner column stroke lines
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(playerX + 5, 0, 25, 340);
+
+            if (specialLaserTimer <= 0) specialLaserActive = false;
         }
 
-        // Process and Render Alien Enemy Vectors Ticks Pipeline
-        enemySpawnTimer++;
-        if (enemySpawnTimer > Math.max(15, 45 - currentPhase * 3)) {
-            spawnAlienUnit();
-            enemySpawnTimer = 0;
+        // Check if game threshold met to instantiate Phase 10 Boss Sequence
+        if (score >= 200 && !bossActive && currentPhase === 0) {
+            bossActive = true;
+            currentPhase = 1;
+            document.getElementById('target-ui').innerText = `BOSS PHASE 1: ${bossPhases[currentPhase].name}`;
+            document.getElementById('target-ui').style.color = "#ffff00";
         }
 
-        for (let a = alienSwarm.length - 1; a >= 0; a--) {
-            let drone = alienSwarm[a];
-            drone.y += drone.speed;
-            
-            ctx.font = "26px Arial";
-            ctx.fillText(drone.unit, drone.x, drone.y);
+        // Handle Standard Weapons Lasers Arrays Loop
+        ctx.fillStyle = "#00ffff";
+        for (let l = standardLasers.length - 1; l >= 0; l--) {
+            let projectile = standardLasers[l];
+            projectile.y -= projectile.speed;
+            ctx.fillRect(projectile.x, projectile.y, 4, 10);
+            if (projectile.y < 0) standardLasers.splice(l, 1);
+        }
 
-            // Collisions Framework checking intersections coordinates overlaps
-            // 1. Lasers hitting Aliens
-            for (let l = laserMagazine.length - 1; l >= 0; l--) {
-                let beam = laserMagazine[l];
-                if (beam.x >= drone.x && beam.x <= drone.x + 26 && beam.y >= drone.y - 20 && beam.y <= drone.y) {
-                    laserMagazine.splice(l, 1);
-                    
-                    if (drone.heavy) {
-                        drone.heavy = false; // Armor broken indicator mapping configuration status
-                        drone.unit = "🛸";
-                    } else {
-                        alienSwarm.splice(a, 1);
-                        score += 15;
-                        document.getElementById('score-lbl').innerText = score;
-                        evaluateThreatLevel();
-                    }
-                    break;
-                }
+        // BOSS SYSTEM ENGINE LOGIC PIPELINE
+        if (bossActive) {
+            // Drop boss smoothly onto screen layout baseline coordinates entry slot
+            if (bossY < 40) bossY += 1.5;
+
+            // Horizontal hover pacing boundary swings
+            bossX += bossDirection * (1.5 + currentPhase * 0.25);
+            if (bossX < 10 || bossX > canvas.width - 110) bossDirection *= -1;
+
+            // Draw Boss Sprite Box Graphic
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.strokeStyle = bossPhases[currentPhase].color;
+            ctx.lineWidth = 3;
+            ctx.fillRect(bossX, bossY, 100, 50);
+            ctx.strokeRect(bossX, bossY, 100, 50);
+
+            ctx.font = "34px Arial";
+            ctx.fillText(bossPhases[currentPhase].emoji, bossX + 32, bossY + 38);
+
+            // Draw Boss Health Bar indicator bounding box directly on canvas stage
+            ctx.fillStyle = "#333";
+            ctx.fillRect(bossX, bossY - 15, 100, 6);
+            ctx.fillStyle = "#ff3333";
+            ctx.fillRect(bossX, bossY - 15, (bossHp / maxBossHp) * 100, 6);
+
+            // Boss weapon weapon projectile logic dropping threats down coordinate lanes
+            enemySpawnTimer++;
+            if (enemySpawnTimer > Math.max(10, 30 - currentPhase * 2)) {
+                enemyUnits.push({ x: bossX + 20 + Math.random() * 60, y: bossY + 50, speed: 4 + currentPhase * 0.35, symbol: "🔴" });
+                enemySpawnTimer = 0;
             }
 
-            // 2. Aliens colliding into Player hull bounds
-            if (drone.x >= playerX - 15 && drone.x <= playerX + 35 && drone.y >= 315 && drone.y <= 350) {
-                alienSwarm.splice(a, 1);
-                playerHp -= 20;
-                document.getElementById('hull-lbl').innerText = playerHp + "%";
-                if (playerHp <= 0) terminateMissionSession();
-            }
-
-            // Boundary baseline floor sweeps drop cleanups
-            if (drone.y > canvas.height) {
-                alienSwarm.splice(a, 1);
-                playerHp -= 5; // Structural hull penalty for missing sector threats
-                document.getElementById('hull-lbl').innerText = Math.max(0, playerHp) + "%";
-                if (playerHp <= 0) terminateMissionSession();
-            }
-        }
-
-        requestAnimationFrame(runGameEngineLoop);
-    }
-
-    function evaluateThreatLevel() {
-        // Automatically steps difficulty scales configurations dynamically every 150 points up to 10
-        let targetPhase = Math.floor(score / 150) + 1;
-        if (targetPhase > currentPhase && targetPhase <= 10) {
-            currentPhase = targetPhase;
-            enemySpeedMultiplier += 0.45; // Incremental layout tracking adjustments
-            document.getElementById('threat-lbl').innerText = currentPhase;
-        }
-    }
-
-    function terminateMissionSession() {
-        gameRunning = false;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = "#ff3333";
-        ctx.font = "bold 24px 'Courier New'";
-        ctx.fillText("MISSION DESTROYED", 100, 160);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "14px 'Courier New'";
-        ctx.fillText(`FINAL SCORE: ${score} | TERMINAL PHASE: ${currentPhase}`, 85, 200);
-    }
-</script>
-</body>
-</html>
+            // Boss collisions tracking loops
+            // 1. Hit by Standard Fire Weapon Lasers
