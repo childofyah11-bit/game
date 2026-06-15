@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>index.html</title>
+    <title>Arcade Boss Gauntlet</title>
     <style>
         body { background: #020208; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
         .cabinet { max-width: 460px; margin: 5px auto; background: #0c0d18; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
@@ -17,14 +17,12 @@
 <div class="cabinet">
     <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">⚡ OMEGA BOSS GAUNTLET ⚡</div>
     
-    <!-- Real-time Status Readouts -->
     <div class="hud">
         <div id="phase-lbl" style="color:#ff3333; font-size:12px;">PHASE 1: TARGET LOCKED</div>
         <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
         <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
-    <!-- Active Physics Window Viewport Engine -->
     <canvas id="canvas" width="420" height="370"></canvas>
 
     <button class="btn" onclick="launchGame()">LAUNCH STARFIGHTER</button>
@@ -38,16 +36,13 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // System States Engine Settings
     let gameActive = false, score = 0, playerHp = 100, currentPhase = 1;
     let playerX = 195, playerSpeed = 7, keys = {};
     let playerLasers = [], bossBullets = [], abilityTimer = 0, abilityCooldown = 0;
     
-    // Constant Active Boss Variable Parameters
     let bossX = 160, bossY = 40, bossWidth = 100, bossHeight = 45, bossDir = 1;
     let bossHp = 2000, maxBossHp = 2000, shootInterval = 0;
 
-    // Fixed Angry Face Progression tracking 10 distinct phases of fury
     const phaseMap = {
         1: { name: "Scout Dreadnought", color: "#33ff33", icon: "😠", speed: 1.5, bulletFreq: 25 },
         2: { name: "Ion Siege Cannon", color: "#00ffff", icon: "😠", speed: 2.0, bulletFreq: 22 },
@@ -82,8 +77,8 @@
     }
 
     function triggerAbility() {
-        abilityTimer = 90; // Active for 1.5 seconds
-        abilityCooldown = 300; // Cooldown clock
+        abilityTimer = 90;
+        abilityCooldown = 300;
     }
 
     function loop() {
@@ -91,15 +86,12 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Flight Navigation Physics
         if (keys['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
         if (keys['ArrowRight'] && playerX < canvas.width - 35) playerX += playerSpeed;
 
-        // Ability Clock Cooldowns
         if (abilityTimer > 0) abilityTimer--;
         if (abilityCooldown > 0) abilityCooldown--;
 
-        // Draw Special Ability Shield Wall
         if (abilityTimer > 0) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.4)";
             ctx.strokeStyle = "#ff00ff";
@@ -108,33 +100,27 @@
             ctx.strokeRect(playerX - 15, 310, 60, 8);
         }
 
-        // Draw Hero Ship Model
         ctx.font = "24px Arial";
         ctx.fillStyle = "#ffffff";
         ctx.fillText("🚀", playerX, 350);
 
-        // Horizontal Boss Cruise Trajectory Logic
         bossX += bossDir * phaseMap[currentPhase].speed;
         if (bossX < 5 || bossX > canvas.width - bossWidth - 5) bossDir *= -1;
 
-        // Draw Capital Boss Hull Core Shape
         ctx.fillStyle = "rgba(10, 15, 35, 0.8)";
         ctx.strokeStyle = phaseMap[currentPhase].color;
         ctx.lineWidth = 3;
         ctx.fillRect(bossX, bossY, bossWidth, bossHeight);
         ctx.strokeRect(bossX, bossY, bossWidth, bossHeight);
 
-        // Render Current Phase Emoji Icon inside boss box
         ctx.font = "26px Arial";
         ctx.fillText(phaseMap[currentPhase].icon, bossX + 36, bossY + 32);
 
-        // Draw Boss Canvas Health Bar directly overhead
         ctx.fillStyle = "#222";
         ctx.fillRect(bossX, bossY - 14, bossWidth, 6);
         ctx.fillStyle = phaseMap[currentPhase].color;
         ctx.fillRect(bossX, bossY - 14, (bossHp / maxBossHp) * bossWidth, 6);
 
-        // Automated Boss Fire Delivery System
         shootInterval++;
         if (shootInterval > phaseMap[currentPhase].bulletFreq) {
             bossBullets.push({ x: bossX + 20, y: bossY + bossHeight, speed: 4 });
@@ -142,24 +128,20 @@
             shootInterval = 0;
         }
 
-        // Handle Player Lasers Moving Upward
         ctx.fillStyle = "#00ffff";
         for (let l = playerLasers.length - 1; l >= 0; l--) {
             let laser = playerLasers[l];
             laser.y -= 9;
             ctx.fillRect(laser.x, laser.y, 4, 10);
 
-            // Bounds cleanups
             if (laser.y < 0) { playerLasers.splice(l, 1); continue; }
 
-            // Collision check: Lasers hitting Boss box limits
             if (laser.x >= bossX && laser.x <= bossX + bossWidth && laser.y >= bossY && laser.y <= bossY + bossHeight) {
                 playerLasers.splice(l, 1);
                 damageBossCore(20);
             }
         }
 
-        // Handle Boss Bullets Moving Downward
         ctx.fillStyle = "#ff3333";
         for (let b = bossBullets.length - 1; b >= 0; b--) {
             let bullet = bossBullets[b];
@@ -168,15 +150,13 @@
 
             if (bullet.y > canvas.height) { bossBullets.splice(b, 1); continue; }
 
-            // Check if special protective barrier wall deflects bullet
             if (abilityTimer > 0 && bullet.x >= playerX - 15 && bullet.x <= playerX + 45 && bullet.y >= 310 && bullet.y <= 320) {
                 bossBullets.splice(b, 1);
-                score += 5; // Extra bonus points
+                score += 5;
                 document.getElementById('score-lbl').innerText = score;
                 continue;
             }
 
-            // Bullet hits ship hull plating box boundaries
             if (bullet.x >= playerX && bullet.x <= playerX + 24 && bullet.y >= 330 && bullet.y <= 355) {
                 bossBullets.splice(b, 1);
                 inflictHeroDamage(10);
@@ -197,7 +177,6 @@
             return;
         }
 
-        // Recalculate if boss needs to shift phases (10 steps)
         let evaluatedLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
         if (evaluatedLvl > currentPhase && evaluatedLvl <= 10) {
             currentPhase = evaluatedLvl;
@@ -217,10 +196,10 @@
         gameActive = false;
         ctx.fillStyle = "rgba(2, 2, 8, 0.9)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
         ctx.font = "bold 20px monospace";
-        if (didWin) {
-            ctx.fillStyle = "#00ffcc";
-            ctx.fillText("VICTORY! ALL 10 PHASES DESTROYED", 30, 175);
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "14px monospace";
+        ctx.fillStyle = didWin ? "#00ffcc";
+        ctx.fillText(didWin ? "VICTORY! ALL 10 PHASES DESTROYED" : "HULL DESTROYED - GAME OVER", 30, 175);
+    }
+</script>
+</body>
+</html>
