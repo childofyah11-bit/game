@@ -3,176 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
+    <title>Arcade Space Strike</title>
     <style>
-        body { background: #020205; color: #33ff33; font-family: 'Courier New', monospace; padding: 15px; margin: 0; text-align: center; }
-        .terminal { max-width: 550px; margin: 10px auto; background: #000; border: 2px solid #33ff33; padding: 20px; box-shadow: 0 0 15px rgba(0,255,0,0.4); text-align: left; }
-        .header { text-align: center; border-bottom: 2px dashed #33ff33; padding-bottom: 10px; margin-bottom: 15px; color: #fff; font-weight: bold; }
-        .screen-log { height: 160px; overflow-y: auto; border: 1px solid #115511; padding: 10px; background: #040804; margin-bottom: 15px; font-size: 13px; line-height: 18px; }
-        .hud-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px; background: #081408; padding: 6px; border: 1px dashed #33ff33; }
-        .action-link { display: block; background: #001f00; color: #33ff33; border: 1px solid #33ff33; padding: 12px; margin-bottom: 8px; text-decoration: none; font-weight: bold; cursor: pointer; text-align: center; }
-        .action-link:hover { background: #33ff33; color: #000; }
+        body { background: #020205; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
+        .cabinet { max-width: 460px; margin: 5px auto; background: #0b0c16; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        #canvas { background: #000000; display: block; margin: 8px auto; border: 2px solid #222; }
+        .hud { display: flex; justify-content: space-between; background: #111424; padding: 8px; border: 1px solid #00ffcc; font-size: 12px; font-weight: bold; }
+        .btn { background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 10px 20px; font-size: 14px; font-weight: bold; font-family: monospace; cursor: pointer; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div class="terminal">
-    <div class="header">📡 MAIN TACTICAL TERMINAL v4.01</div>
+<div class="cabinet">
+    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">⚡ GALACTIC INTERCEPTOR ⚡</div>
     
-    <!-- System Analytics HUD -->
-    <div class="hud-row">
-        <div>HULL: <span id="hull-txt" style="color:#ff3333;">100/100</span></div>
-        <div>COOLDOWN: <span id="cool-txt" style="color:#00ffff;">READY</span></div>
-        <div id="target-title" style="color:#ffff00;">TARGET: SECTOR ENTRY</div>
+    <div class="hud">
+        <div id="target-lbl" style="color:#ff3333;">OBJECTIVE: DEFEND</div>
+        <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
+        <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
-    <!-- Scrolling Narrative Screen Output -->
-    <div id="log-box" class="screen-log">
-        [SYSTEM ONLINE] You are the Captain of the STRF-01 Vanguard class starship. Enemy alerts are spiking in this grid sector. Make your choices wisely...
-    </div>
+    <canvas id="canvas" width="420" height="360"></canvas>
 
-    <!-- Active Choice Command Links Dashboard -->
-    <div id="options-box">
-        <div class="action-link" onclick="handleChoice('fire')">» ORDER PRIMARY WEAPON VOLLEY</div>
-        <div class="action-link" onclick="handleChoice('shield')">» INITIATE SHIELD CORE RECHARGE</div>
-        <div class="action-link" onclick="handleChoice('evade')">» EXECUTE EVASIVE MANEUVER</div>
+    <button class="btn" onclick="bootEngine()">LAUNCH SHIP</button>
+    <div style="font-size: 10px; color: #557799; margin-top: 6px; font-weight: bold; line-height: 14px;">
+        FLY: [◀ LEFT / RIGHT ▶] Arrow Keys | FIRE: [SPACEBAR]<br>
+        <span style="color:#ff00ff;">SPECIAL POWER: Press [SHIFT] to raise a 3-Second Shield Bubble!</span>
     </div>
 </div>
 
 <script>
-    let playerHull = 100, shieldCooldown = 0, currentPhase = 0, score = 0;
-    let bossHp = 1000, maxBossHp = 1000;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
-    const bossData = {
-        1: { name: "Cruiser Vanguard", weapon: "Targeting Lasers", power: 8 },
-        2: { name: "Heavy Dreadnought", weapon: "Plasma Flak Cannons", power: 12 },
-        3: { name: "Void Swarm Carrier", weapon: "Interceptor Drones", power: 16 },
-        4: { name: "Ion Matrix Citadel", weapon: "EMP Disruption Waves", power: 20 },
-        5: { name: "Singularity Flagship", weapon: "Gravity Well Beams", power: 25 },
-        6: { name: "Abyss Shadow Titan", weapon: "Dark Matter Missiles", power: 30 },
-        7: { name: "Nebula Shock Cruiser", weapon: "Chain Lightning Arcs", power: 35 },
-        8: { name: "Hyperion Doomsday Pod", weapon: "Antimatter Mortars", power: 40 },
-        9: { name: "Chaos World-Eater", weapon: "Solar Flare Rays", power: 45 },
-        10: { name: "Omega Primus Engine", weapon: "Supernova Railgun Core", power: 55 }
+    let gameActive = false, score = 0, playerHp = 100, currentPhase = 0;
+    let playerX = 190, playerSpeed = 7, keys = {};
+    let lasers = [], enemies = [], specialShieldTime = 0, shieldCharge = 100;
+    let spawnTimer = 0;
+
+    let bossActive = false, bossX = 160, bossY = -50, bossHp = 1000, maxBossHp = 1000, bossDir = 1;
+
+    const bossPhases = {
+        1: { name: "Doom Cruiser", color: "#ff3333" },
+        2: { name: "Viper Titan", color: "#ff6600" },
+        3: { name: "Void Carrier", color: "#ffcc00" },
+        4: { name: "Swarm Flagship", color: "#cc00cc" },
+        5: { name: "Eclipse Citadel", color: "#9900cc" },
+        6: { name: "Quantum Core", color: "#3333ff" },
+        7: { name: "Nebula Ravager", color: "#00ffff" },
+        8: { name: "Hyperion Pod", color: "#00ff66" },
+        9: { name: "Chaos Star", color: "#ffffff" },
+        10: { name: "Omega Dreadnought", color: "#ff00ff" }
     };
 
-    function writeLog(text) {
-        const box = document.getElementById('log-box');
-        box.innerHTML += `<br><br>${text}`;
-        box.scrollTop = box.scrollHeight;
+    window.addEventListener('keydown', (e) => { 
+        keys[e.code] = true; 
+        if (e.code === "Space" && gameActive) lasers.push({ x: playerX + 18, y: 320, isHero: true });
+        if (e.code === "ShiftLeft" || e.code === "ShiftRight") activateSpecialShield();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    function bootEngine() {
+        score = 0; playerHp = 100; currentPhase = 0; playerX = 190; specialShieldTime = 0; shieldCharge = 100;
+        lasers = []; enemies = []; bossActive = false; bossY = -50; bossHp = 1000;
+        gameActive = true;
+        
+        document.getElementById('score-lbl').innerText = score;
+        document.getElementById('hull-lbl').innerText = playerHp + "%";
+        document.getElementById('target-lbl').innerText = "CLEAR DRONES";
+        document.getElementById('target-lbl').style.color = "#ff3333";
+        
+        requestAnimationFrame(loop);
     }
 
-    function handleChoice(action) {
-        if (playerHull <= 0) return;
+    function activateSpecialShield() {
+        if (shieldCharge < 100 || !gameActive) return;
+        specialShieldTime = 180; // 3 seconds at 60fps frame loop
+        shieldCharge = 0;
+    }
 
-        // Reduce ability cooldown timers if active
-        if (shieldCooldown > 0) {
-            shieldCooldown--;
-            document.getElementById('cool-txt').innerText = `WAIT (${shieldCooldown} turns)`;
-            if (shieldCooldown === 0) document.getElementById('cool-txt').innerText = "READY";
+    function loop() {
+        if (!gameActive) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Movement Physics
+        if (keys['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
+        if (keys['ArrowRight'] && playerX < canvas.width - 45) playerX += playerSpeed;
+
+        // Render Shield Charging mechanics
+        if (shieldCharge < 100) shieldCharge += 0.2;
+
+        // Render Hero Ship
+        ctx.font = "28px Arial";
+        ctx.fillText("🚀", playerX, 345);
+
+        // Render Special Shield Bubble Visual overlay
+        if (specialShieldTime > 0) {
+            specialShieldTime--;
+            ctx.strokeStyle = "#ff00ff";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(playerX + 19, 330, 28, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
-        if (currentPhase === 0) {
-            // Introductory Patrol Waves Route Actions
-            if (action === 'fire') {
-                score += 50;
-                writeLog("» Fire order confirmed! Your plasma batteries blow apart an approaching scout drone. (+50 Score)");
-            } else if (action === 'shield') {
-                if (shieldCooldown === 0) {
-                    shieldCooldown = 3;
-                    playerHull = Math.min(100, playerHull + 25);
-                    writeLog("» Core recharge online. Nanobots patched structural hull integrity plates by +25.");
-                } else {
-                    writeLog("» COMMAND FAILED: Shield recharge system is currently cooling down!");
-                    return;
-                }
-            } else if (action === 'evade') {
-                writeLog("» Main thrusters burning! You dodge through a cluster of drifting asteroid debris cleanly.");
+        // Spawn Boss Check
+        if (score >= 200 && !bossActive && currentPhase === 0) {
+            bossActive = true;
+            currentPhase = 1;
+            document.getElementById('target-lbl').innerText = `P${currentPhase}: ${bossPhases[currentPhase].name}`;
+        }
+
+        // Lasers Logic
+        ctx.fillStyle = "#00ffff";
+        for (let l = lasers.length - 1; l >= 0; l--) {
+            let laser = lasers[l];
+            laser.y += laser.isHero ? -8 : 5;
+            ctx.fillRect(laser.x, laser.y, 4, 10);
+
+            // Delete offscreen lasers
+            if (laser.y < 0 || laser.y > canvas.height) { lasers.splice(l, 1); continue; }
+
+            // Laser hitting hero ship
+            if (!laser.isHero && laser.x >= playerX && laser.x <= playerX + 35 && laser.y >= 320 && laser.y <= 350) {
+                lasers.splice(l, 1);
+                if (specialShieldTime <= 0) hitPlayer(15);
+            }
+        }
+
+        // Boss Logic Engine Pipeline
+        if (bossActive) {
+            if (bossY < 35) bossY += 1;
+            bossX += bossDir * (1.2 + currentPhase * 0.2);
+            if (bossX < 10 || bossX > canvas.width - 90) bossDir *= -1;
+
+            // Draw Boss
+            ctx.fillStyle = bossPhases[currentPhase].color;
+            ctx.fillRect(bossX, bossY, 80, 40);
+            ctx.font = "24px Arial";
+            ctx.fillText("🛸", bossX + 26, bossY + 28);
+
+            // Boss Shooting Counter Attacks
+            spawnTimer++;
+            if (spawnTimer > Math.max(12, 35 - currentPhase * 2)) {
+                lasers.push({ x: bossX + 40, y: bossY + 40, isHero: false });
+                spawnTimer = 0;
             }
 
-            // Check if threshold reached to trigger Phase 10 capital boss arrival
-            if (score >= 150) {
-                currentPhase = 1;
-                document.getElementById('target-title').innerText = `BOSS P1: ${bossData[currentPhase].name}`;
-                writeLog("<span style='color:#ff3333; font-weight:bold;'>[🚨 IMMEDIATE ALERT] An enormous shadow blocks out the stars! The 10-Phase Alien Dreadnought Capital ship has jumped into your sector! Defeat it!</span>");
-                updateHUD();
-                return;
+            // Hero lasers hitting boss
+            for (let l = lasers.length - 1; l >= 0; l--) {
+                let m = lasers[l];
+                if (m.isHero && m.x >= bossX && m.x <= bossX + 80 && m.y >= bossY && m.y <= bossY + 40) {
+                    lasers.splice(l, 1);
+                    damageBoss(30);
+                }
             }
         } else {
-            // Capital Boss Phase Battle Route Decisions
-            let bossDmg = 0;
-            let playerProtected = false;
-
-            if (action === 'fire') {
-                bossDmg = Math.floor(Math.random() * 40) + 90; // Dealt massive damage blocks
-                bossHp -= bossDmg;
-                writeLog(`» Assault lasers tracking! You land a direct impact into the Dreadnought hull for <span style='color:#ff3333;'>-${bossDmg} structural damage</span>.`);
-                evaluateBossMaturity();
-            } else if (action === 'shield') {
-                if (shieldCooldown === 0) {
-                    shieldCooldown = 4;
-                    playerProtected = true;
-                    playerHull = Math.min(100, playerHull + 15);
-                    writeLog("» Deflector barrier deployed! Hull plates fortified by +15. You will absorb the next incoming blow.");
-                } else {
-                    writeLog("» COMMAND FAILED: Auxiliary barrier capacitor is empty!");
-                    return;
-                }
-            } else if (action === 'evade') {
-                if (Math.random() > 0.4) {
-                    playerProtected = true;
-                    writeLog("» Tactical roll executed! You break lock from the enemy ship's secondary targeting tracking reticles.");
-                } else {
-                    writeLog("» Thruster sputter! Evasive vector correction failed to shake enemy trackers.");
-                }
-            }
-
-            // Capital Boss retaliates counter-fire round phase logic
-            if (bossHp > 0) {
-                let bossWeaponPower = bossData[currentPhase].power;
-                let finalIncomingHit = Math.floor(Math.random() * 6) + (bossWeaponPower - 3);
-
-                if (playerProtected) {
-                    finalIncomingHit = Math.floor(finalIncomingHit * 0.15); // Immense reduction tracking
-                    writeLog(`» Your reactive countermeasures absorb the heavy kinetic shockwave cleanly.`);
-                }
-
-                playerHull -= finalIncomingHit;
-                writeLog(`💥 The ${bossData[currentPhase].name} fires its ${bossData[currentPhase].weapon}! Your ship takes -${finalIncomingHit} Hull points damage.`);
-                
-                if (playerHull <= 0) {
-                    playerHull = 0;
-                    writeLog("<span style='color:#ff0000; font-weight:bold;'>[💀 CRITICAL BREAKAGE] Sector lost. The ship was split in half by the dreadnought beam. Click refresh to reboot system files.</span>");
-                    document.getElementById('options-box').innerHTML = "<div class='action-link' onclick='location.reload()'>» SYSTEM REBOOT (REFRESH)</div>";
-                }
+            // Standard Drone spawning logic loops
+            spawnTimer++;
+            if (spawnTimer > 30) {
+                enemies.push({ x: Math.random() * (canvas.width - 30), y: -20, speed: 3 });
+                spawnTimer = 0;
             }
         }
 
-        updateHUD();
+        // Drones Processing loops
+        for (let e = enemies.length - 1; e >= 0; e--) {
+            let drone = enemies[e];
+            drone.y += drone.speed;
+            ctx.font = "22px Arial";
+            ctx.fillText("👾", drone.x, drone.y);
+
+            // Special shield vaporizes drones instantly
+            if (specialShieldTime > 0 && drone.x >= playerX - 20 && drone.x <= playerX + 50 && drone.y >= 300) {
+                enemies.splice(e, 1);
+                score += 20;
+                document.getElementById('score-lbl').innerText = score;
+                continue;
+            }
+
+            // Lasers hitting drones
+            for (let l = lasers.length - 1; l >= 0; l--) {
+                let m = lasers[l];
+                if (m.isHero && m.x >= drone.x - 5 && m.x <= drone.x + 25 && m.y >= drone.y - 20 && m.y <= drone.y) {
+                    lasers.splice(l, 1);
+                    enemies.splice(e, 1);
+                    score += 20;
+                    document.getElementById('score-lbl').innerText = score;
+                    break;
+                }
+            }
+
+            // Drone crashes into hero ship
+            if (drone.x >= playerX - 15 && drone.x <= playerX + 35 && drone.y >= 320 && drone.y <= 350) {
+                enemies.splice(e, 1);
+                if (specialShieldTime <= 0) hitPlayer(20);
+            }
+        }
+
+        requestAnimationFrame(loop);
     }
 
-    function evaluateBossMaturity() {
-        if (bossHp <= 0) {
-            bossHp = 0;
-            writeLog("<span style='color:#00ff66; font-weight:bold;'>🎉 MISSION SUCCESSFUL! The Dreadnought explodes into a massive supernova burst. You saved the quadrant from all 10 threat forms!</span>");
-            document.getElementById('options-box').innerHTML = "<div class='action-link' style='color:#00ff66;' onclick='location.reload()'>» DEPLOY TO NEW QUANDRANT (REPLAY)</div>";
-            return;
-        }
+    function damageBoss(amt) {
+        bossHp -= amt;
+        if (bossHp <= 0) { endSession(true); return; }
 
-        // Calculate boss evolution rank tier shifts (10 increments step check)
-        let computedRank = 11 - Math.ceil((bossHp / maxBossHp) * 10);
-        if (computedRank > currentPhase && computedRank <= 10) {
-            currentPhase = computedRank;
-            writeLog(`<span style='color:#ffff00; font-weight:bold;'>⚠️ WARNING: The enemy flagship updates its shields and transforms into Phase ${currentPhase}: [${bossData[currentPhase].name}]!</span>`);
-            document.getElementById('target-title').innerText = `BOSS P${currentPhase}: ${bossData[currentPhase].name}`;
+        let targetLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (targetLvl > currentPhase && targetLvl <= 10) {
+            currentPhase = targetLvl;
+            document.getElementById('target-lbl').innerText = `P${currentPhase}: ${bossPhases[currentPhase].name}`;
+            document.getElementById('target-lbl').style.color = bossPhases[currentPhase].color;
         }
     }
 
-    function updateHUD() {
-        document.getElementById('hull-txt').innerText = `${playerHull}/100`;
-        if (currentPhase > 0) {
-            document.getElementById('target-title').innerText = `BOSS P${currentPhase}: ${bossData[currentPhase].name} (HP: ${bossHp})`;
-        }
+    function hitPlayer(amt) {
+        playerHp -= amt;
+        if (playerHp < 0) playerHp = 0;
+        document.getElementById('hull-lbl').innerText = playerHp + "%";
+        if (playerHp <= 0) endSession(false);
+    }
+
+    function endSession(win) {
+        gameActive = false;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "bold 20px monospace";
+        ctx.fillStyle = win ? "#00ff66" : "#ff3333";
+        ctx.fillText(win ? "VICTORY! ALL 10 PHASES CLEARED" : "STRF-01 DESTROYED", 50, 180);
     }
 </script>
 </body>
