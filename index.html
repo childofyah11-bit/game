@@ -24,7 +24,7 @@
         <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
-    <!-- Active Vector Viewport Engine -->
+    <!-- Active Physics Window Viewport Engine -->
     <canvas id="canvas" width="420" height="370"></canvas>
 
     <button class="btn" onclick="launchGame()">LAUNCH STARFIGHTER</button>
@@ -47,17 +47,18 @@
     let bossX = 160, bossY = 40, bossWidth = 100, bossHeight = 45, bossDir = 1;
     let bossHp = 2000, maxBossHp = 2000, shootInterval = 0;
 
+    // Fixed Angry Face Progression tracking 10 distinct phases of fury
     const phaseMap = {
-        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "🛸", speed: 1.5, bulletFreq: 25 },
-        2: { name: "Ion Siege Cannon", color: "#00ffff", icon: "🛰️", speed: 2.0, bulletFreq: 22 },
-        3: { name: "Flame Core Engine", color: "#ff9900", icon: "🔥", speed: 2.4, bulletFreq: 20 },
-        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "👾", speed: 2.8, bulletFreq: 18 },
-        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "🔮", speed: 3.2, bulletFreq: 16 },
-        6: { name: "Singularity Core", color: "#9900cc", icon: "🌀", speed: 3.6, bulletFreq: 14 },
-        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "👁️", speed: 4.0, bulletFreq: 12 },
-        8: { name: "Hyperion Station", color: "#ffff00", icon: "🏰", speed: 4.4, bulletFreq: 10 },
-        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "🪐", speed: 4.8, bulletFreq: 8 },
-        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "💀", speed: 5.5, bulletFreq: 6 }
+        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "😠", speed: 1.5, bulletFreq: 25 },
+        2: { name: "Ion Siege Cannon", color: "#00ffff", icon: "😠", speed: 2.0, bulletFreq: 22 },
+        3: { name: "Flame Core Engine", color: "#ff9900", icon: "😡", speed: 2.4, bulletFreq: 20 },
+        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "😡", speed: 2.8, bulletFreq: 18 },
+        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "🤬", speed: 3.2, bulletFreq: 16 },
+        6: { name: "Singularity Core", color: "#9900cc", icon: "🤬", speed: 3.6, bulletFreq: 14 },
+        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "😈", speed: 4.0, bulletFreq: 12 },
+        8: { name: "Hyperion Station", color: "#ffff00", icon: "😈", speed: 4.4, bulletFreq: 10 },
+        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "👹", speed: 4.8, bulletFreq: 8 },
+        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "👺", speed: 5.5, bulletFreq: 6 }
     };
 
     window.addEventListener('keydown', (e) => { 
@@ -82,7 +83,7 @@
 
     function triggerAbility() {
         abilityTimer = 90; // Active for 1.5 seconds
-        abilityCooldown = 300; // 5-second downtime wait clock
+        abilityCooldown = 300; // Cooldown clock
     }
 
     function loop() {
@@ -170,7 +171,7 @@
             // Check if special protective barrier wall deflects bullet
             if (abilityTimer > 0 && bullet.x >= playerX - 15 && bullet.x <= playerX + 45 && bullet.y >= 310 && bullet.y <= 320) {
                 bossBullets.splice(b, 1);
-                score += 5; // Extra bonus points scored for blocking attacks
+                score += 5; // Extra bonus points
                 document.getElementById('score-lbl').innerText = score;
                 continue;
             }
@@ -223,4 +224,3 @@
             ctx.fillText("VICTORY! ALL 10 PHASES DESTROYED", 30, 175);
             ctx.fillStyle = "#ffffff";
             ctx.font = "14px monospace";
-            ctx.fillText(`Final Arcade Score: ${score}`, 110, 215);
