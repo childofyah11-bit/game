@@ -1,4 +1,4 @@
-<!DOCTYPE html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,28 +6,27 @@
     <title>Cyber Neon Gauntlet</title>
     <style>
         body { background: #03010a; color: #ff00ff; font-family: 'Impact', sans-serif; text-align: center; margin: 0; padding: 15px; overflow: hidden; user-select: none; }
-        .arcade-container { max-width: 480px; margin: 0 auto; background: #0c051c; border: 4px solid #ff00ff; box-shadow: 0 0 20px #ff00ff; padding: 15px; border-radius: 12px; }
+        .arcade-container { max-width: 440px; margin: 0 auto; background: #0c051c; border: 4px solid #ff00ff; box-shadow: 0 0 20px #ff00ff; padding: 15px; border-radius: 12px; position: relative; }
         
         /* Tactical Combat Matrix Grid */
-        .combat-arena { position: relative; width: 100%; height: 280px; background: #060210; border: 2px solid #00ffff; box-shadow: inset 0 0 15px rgba(0,255,255,0.3); margin: 10px 0; overflow: hidden; }
+        .combat-arena { position: relative; width: 100%; height: 260px; background: #060210; border: 2px solid #00ffff; box-shadow: inset 0 0 15px rgba(0,255,255,0.3); margin: 10px 0; overflow: hidden; }
         
         /* Shifting Boss Head Model Frame */
-        #boss-avatar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 70px; text-shadow: 0 0 20px #ff0000; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #boss-avatar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 70px; text-shadow: 0 0 20px #ff0000; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 5; }
         
         /* Real-Time Pulse Targets */
-        .strike-node { position: absolute; width: 55px; height: 55px; background: #00ffff; border: 3px solid #fff; border-radius: 50%; font-size: 24px; line-height: 55px; text-align: center; cursor: pointer; box-shadow: 0 0 15px #00ffff; animation: pulseGrow 0.4s ease-out; }
+        .strike-node { position: absolute; width: 55px; height: 55px; background: #00ffff; border: 3px solid #fff; border-radius: 50%; font-size: 24px; line-height: 55px; text-align: center; cursor: pointer; box-shadow: 0 0 15px #00ffff; z-index: 10; transform: scale(1); transition: transform 0.1s; }
+        .strike-node:active { transform: scale(0.85); }
         
         /* Special Ability Battery Controls */
-        .hud-grid { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; font-size: 12px; font-weight: bold; }
-        .hud-panel { background: #14072b; border: 1px solid #ff00ff; padding: 8px; width: 46%; text-align: left; }
-        .meter { background: #221133; width: 100%; height: 14px; border: 1px solid #fff; margin-top: 4px; overflow: hidden; }
+        .hud-grid { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; font-size: 11px; font-weight: bold; }
+        .hud-panel { background: #14072b; border: 1px solid #ff00ff; padding: 6px; width: 46%; text-align: left; }
+        .meter { background: #221133; width: 100%; height: 12px; border: 1px solid #fff; margin-top: 4px; overflow: hidden; }
         .fill { height: 100%; width: 100%; transition: width 0.15s; }
         
-        .btn-overdrive { width: 100%; background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; text-shadow: 1px 1px 0 #000; box-shadow: 0 0 10px #ff00ff; margin-top: 5px; }
+        .btn-overdrive { width: 100%; background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px; font-size: 15px; font-weight: bold; font-family: 'Impact'; cursor: pointer; text-shadow: 1px 1px 0 #000; box-shadow: 0 0 10px #ff00ff; margin-top: 5px; }
         .btn-overdrive:disabled { background: #442244; color: #888; border-color: #666; box-shadow: none; cursor: not-allowed; }
-        .btn-start { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px 30px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; margin-top: 10px; }
-
-        @keyframes pulseGrow { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .btn-start { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px 35px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; margin-top: 5px; box-shadow: 0 0 10px #00ffff; }
     </style>
 </head>
 <body>
@@ -40,12 +39,12 @@
         <div class="hud-panel" style="border-color:#00ff00;">
             <div style="color:#00ff00;">PLAYER SIGNAL</div>
             <div class="meter"><div id="p-fill" class="fill" style="background:#00ff00;"></div></div>
-            <div id="p-lbl" style="margin-top:3px; font-size:10px;">HP: 100/100</div>
+            <div id="p-lbl" style="margin-top:3px;">HP: 100/100</div>
         </div>
         <div class="hud-panel" style="border-color:#ff3333;">
-            <div id="b-name" style="color:#ff3333; font-size:11px;">P1: GLARING SENTINEL</div>
+            <div id="b-name" style="color:#ff3333;">P1: GLARING SENTINEL</div>
             <div class="meter"><div id="b-fill" class="fill" style="background:#ff3333;"></div></div>
-            <div id="b-lbl" style="margin-top:3px; font-size:10px;">CORE: 1500/1500</div>
+            <div id="b-lbl" style="margin-top:3px;">CORE: 1500/1500</div>
         </div>
     </div>
 
@@ -62,30 +61,36 @@
 
 <script>
     const arena = document.getElementById('arena');
-    let gameRunning = false, playerHp = 100, score = 0, currentPhase = 1;
+    let gameRunning = false, playerHp = 100, currentPhase = 1;
     let bossHp = 1500, maxBossHp = 1500;
     let odCharge = 0, overdriveActive = false, overdriveTimer = 0;
     let loopClock, targetSpawnClock;
 
     // Phase tracking database keeping the boss angry face locked in but changing fury attributes
     const phases = {
-        1: { name: "Glaring Sentinel", face: "😠", color: "#33ff33", dmg: 4, speed: 1100 },
-        2: { name: "Irritated Overlord", face: "😠", color: "#00ffff", dmg: 6, speed: 1000 },
-        3: { name: "Aggressive Matrix", face: "😡", color: "#00aaff", dmg: 9, speed: 950 },
-        4: { name: "Furious Mainframe", face: "😡", color: "#a000ff", dmg: 12, speed: 900 },
-        5: { name: "Raging Core Unit", face: "🤬", color: "#ff00ff", dmg: 16, speed: 850 },
-        6: { name: "Berserk Firewall", face: "🤬", color: "#ff0066", dmg: 20, speed: 800 },
-        7: { name: "Vengeful AI Core", face: "👿", color: "#ff3300", dmg: 24, speed: 750 },
-        8: { name: "Demonic Singularity", face: "👿", color: "#ffff00", dmg: 29, speed: 700 },
-        9: { name: "Doomsday Malfunction", face: "👹", color: "#ffffff", dmg: 35, speed: 650 },
-        10: { name: "Omega Lord of Fury", face: "👺", color: "#ff0000", dmg: 44, speed: 550 }
+        1: { name: "Glaring Sentinel", face: "😠", color: "#33ff33", dmg: 4, speed: 1200 },
+        2: { name: "Irritated Overlord", face: "😠", color: "#00ffff", dmg: 6, speed: 1100 },
+        3: { name: "Aggressive Matrix", face: "😡", color: "#00aaff", dmg: 9, speed: 1000 },
+        4: { name: "Furious Mainframe", face: "😡", color: "#a000ff", dmg: 12, speed: 950 },
+        5: { name: "Raging Core Unit", face: "🤬", color: "#ff00ff", dmg: 15, speed: 900 },
+        6: { name: "Berserk Firewall", face: "🤬", color: "#ff0066", dmg: 18, speed: 850 },
+        7: { name: "Vengeful AI Core", face: "危害", color: "#ff3300", dmg: 22, speed: 800 },
+        8: { name: "Demonic Singularity", face: "👿", color: "#ffff00", dmg: 26, speed: 750 },
+        9: { name: "Doomsday Malfunction", face: "👹", color: "#ffffff", dmg: 30, speed: 700 },
+        10: { name: "Omega Lord of Fury", face: "👺", color: "#ff0000", dmg: 35, speed: 600 }
     };
 
     function runNeonEngine() {
         // Clear runtime state
-        playerHp = 100; bossHp = 1500; score = 0; currentPhase = 1; odCharge = 0; overdriveActive = false;
+        playerHp = 100; bossHp = 1500; currentPhase = 1; odCharge = 0; overdriveActive = false;
         document.getElementById('start-btn').style.display = "none";
-        document.querySelectorAll('.strike-node').forEach(n => n.remove());
+        
+        // Wipe old active nodes
+        const activeNodes = document.querySelectorAll('.strike-node');
+        activeNodes.forEach(n => n.remove());
+        
+        const oldScreen = document.getElementById('end-screen');
+        if (oldScreen) oldScreen.remove();
         
         gameRunning = true;
         syncHUD();
@@ -93,24 +98,24 @@
         // Active Core Processing loops
         loopClock = setInterval(engineTick, 50);
         triggerTargetSpawnTimer();
+        spawnCombatNode(); // Spawn initial node immediately
     }
 
     function triggerTargetSpawnTimer() {
         clearInterval(targetSpawnClock);
         if (!gameRunning) return;
         
-        // Scale nodes spawning frequency depending on active phase difficulty layouts
-        let spawnRate = overdriveActive ? 250 : phases[currentPhase].speed;
+        let spawnRate = overdriveActive ? 300 : phases[currentPhase].speed;
         targetSpawnClock = setInterval(spawnCombatNode, spawnRate);
     }
 
     function spawnCombatNode() {
         if (!gameRunning) return;
         
-        // Strip out missed old nodes to penalize slow clicks
-        const oldNode = document.querySelector('.strike-node');
-        if (oldNode) {
-            oldNode.remove();
+        // Remove old nodes to prevent clutter
+        const existingNode = document.querySelector('.strike-node');
+        if (existingNode) {
+            existingNode.remove();
             if (!overdriveActive) hitPlayer(phases[currentPhase].dmg);
         }
 
@@ -118,27 +123,25 @@
         node.className = 'strike-node';
         node.innerText = "⚔️";
         
-        // Random Coordinate Calculations Inside Board Limits
-        let maxW = arena.clientWidth - 60;
-        let maxH = arena.clientHeight - 130; // Avoid overlapping boss head zone
+        // Random placement parameters
+        let maxW = arena.clientWidth - 65;
+        let maxH = arena.clientHeight - 130;
         
         node.style.left = Math.floor(Math.random() * maxW + 5) + 'px';
         node.style.top = Math.floor(Math.random() * maxH + 110) + 'px';
         
-        // Collision Trigger Click event action loop
-        node.onclick = (e) => {
-            e.stopPropagation();
+        node.onmousedown = (e) => {
+            e.preventDefault();
             node.remove();
             
-            let strikePower = overdriveActive ? 60 : 35;
+            let strikePower = overdriveActive ? 65 : 40;
             damageBoss(strikePower);
             
             if (odCharge < 100 && !overdriveActive) {
-                odCharge = Math.min(100, odCharge + 8);
+                odCharge = Math.min(100, odCharge + 10);
                 updateODButton();
             }
-            
-            spawnCombatNode(); // Generate immediate replacement target
+            spawnCombatNode();
         };
 
         arena.appendChild(node);
@@ -147,7 +150,7 @@
     function activateSpecialOverdrive() {
         if (odCharge < 100 || overdriveActive) return;
         overdriveActive = true;
-        overdriveTimer = 60; // 3 seconds at 20 ticks per sec
+        overdriveTimer = 60; 
         document.getElementById('od-btn').style.background = "#ffff00";
         document.getElementById('od-btn').style.color = "#000";
         document.getElementById('boss-avatar').style.transform = "translateX(-50%) scale(0.8)";
@@ -174,12 +177,10 @@
         bossHp -= amt;
         if (bossHp <= 0) { bossHp = 0; resolveMatch(true); return; }
 
-        let targetPhase = window.currentPhase;
-        // 10 Phase checks calculus integration lines
         let theoreticalPhase = 11 - Math.ceil((bossHp / maxBossHp) * 10);
         if (theoreticalPhase > currentPhase && theoreticalPhase <= 10) {
             currentPhase = theoreticalPhase;
-            triggerTargetSpawnTimer(); // Instantly apply updated rhythm speeds settings multiplier parameters
+            triggerTargetSpawnTimer(); 
         }
         syncHUD();
     }
@@ -189,7 +190,6 @@
         if (playerHp < 0) playerHp = 0;
         syncHUD();
         
-        // Impact screen shake visual layout triggers
         arena.style.borderColor = "#ff0000";
         setTimeout(() => arena.style.borderColor = "#00ffff", 100);
 
@@ -200,9 +200,17 @@
         const btn = document.getElementById('od-btn');
         btn.disabled = odCharge < 100;
         if (odCharge >= 100) {
-            btn.innerText = "⚡ UNLEASH OVERDRIVE TACTICS [READY]";
+            btn.innerText = "⚡ UNLEASH OVERDRIVE CORE [READY]";
             btn.style.background = "#ff00ff";
+            btn.style.color = "#fff";
         } else {
             btn.innerText = `OVERDRIVE CORE: ${odCharge}% [CHARGE AT 100%]`;
             btn.style.background = "#442244";
+            btn.style.color = "#888";
+        }
+    }
 
+    function syncHUD() {
+        document.getElementById('p-fill').style.width = Math.max(0, playerHp) + "%";
+        document.getElementById('p-lbl').innerText = `HP: ${playerHp}/100`;
+        
