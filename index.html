@@ -1,225 +1,208 @@
-<!DOCTYPE html>
+<!DOCTYPE html<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Spaceship</title>
+    <title>Cyber Neon Gauntlet</title>
     <style>
-        body { background: #03030c; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
-        .cabinet { max-width: 460px; margin: 5px auto; background: #0c0d1a; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; border-radius: 6px; }
-        #canvas { background: #000000; display: block; margin: 8px auto; border: 2px solid #222; }
-        .hud { display: flex; justify-content: space-between; background: #121528; padding: 8px; border: 1px solid #00ffcc; font-size: 11px; font-weight: bold; }
-        .btn-start { background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px 24px; font-size: 14px; font-weight: bold; font-family: monospace; cursor: pointer; margin-top: 5px; box-shadow: 0 0 8px #ff00ff; }
-        .btn-start:hover { background: #00ffcc; color: #000; box-shadow: 0 0 12px #00ffcc; }
+        body { background: #03010a; color: #ff00ff; font-family: 'Impact', sans-serif; text-align: center; margin: 0; padding: 15px; overflow: hidden; user-select: none; }
+        .arcade-container { max-width: 480px; margin: 0 auto; background: #0c051c; border: 4px solid #ff00ff; box-shadow: 0 0 20px #ff00ff; padding: 15px; border-radius: 12px; }
+        
+        /* Tactical Combat Matrix Grid */
+        .combat-arena { position: relative; width: 100%; height: 280px; background: #060210; border: 2px solid #00ffff; box-shadow: inset 0 0 15px rgba(0,255,255,0.3); margin: 10px 0; overflow: hidden; }
+        
+        /* Shifting Boss Head Model Frame */
+        #boss-avatar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 70px; text-shadow: 0 0 20px #ff0000; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        /* Real-Time Pulse Targets */
+        .strike-node { position: absolute; width: 55px; height: 55px; background: #00ffff; border: 3px solid #fff; border-radius: 50%; font-size: 24px; line-height: 55px; text-align: center; cursor: pointer; box-shadow: 0 0 15px #00ffff; animation: pulseGrow 0.4s ease-out; }
+        
+        /* Special Ability Battery Controls */
+        .hud-grid { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; font-size: 12px; font-weight: bold; }
+        .hud-panel { background: #14072b; border: 1px solid #ff00ff; padding: 8px; width: 46%; text-align: left; }
+        .meter { background: #221133; width: 100%; height: 14px; border: 1px solid #fff; margin-top: 4px; overflow: hidden; }
+        .fill { height: 100%; width: 100%; transition: width 0.15s; }
+        
+        .btn-overdrive { width: 100%; background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; text-shadow: 1px 1px 0 #000; box-shadow: 0 0 10px #ff00ff; margin-top: 5px; }
+        .btn-overdrive:disabled { background: #442244; color: #888; border-color: #666; box-shadow: none; cursor: not-allowed; }
+        .btn-start { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px 30px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; margin-top: 10px; }
+
+        @keyframes pulseGrow { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div class="cabinet">
-    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">🛸 BOSS SHOWDOWN 🛸</div>
+<div class="arcade-container">
+    <div style="font-size: 22px; color: #00ffff; text-shadow: 2px 2px 0 #ff00ff; letter-spacing: 1px;">⚡ CYBER STRIKE MATRIX ⚡</div>
     
-    <!-- Real-time HUD Status Updates -->
-    <div class="hud">
-        <div id="phase-lbl" style="color:#ff3333; font-size:12px;">PHASE 1: TARGET ENGAGED</div>
-        <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
-        <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
+    <!-- Status Dashboard -->
+    <div class="hud-grid">
+        <div class="hud-panel" style="border-color:#00ff00;">
+            <div style="color:#00ff00;">PLAYER SIGNAL</div>
+            <div class="meter"><div id="p-fill" class="fill" style="background:#00ff00;"></div></div>
+            <div id="p-lbl" style="margin-top:3px; font-size:10px;">HP: 100/100</div>
+        </div>
+        <div class="hud-panel" style="border-color:#ff3333;">
+            <div id="b-name" style="color:#ff3333; font-size:11px;">P1: GLARING SENTINEL</div>
+            <div class="meter"><div id="b-fill" class="fill" style="background:#ff3333;"></div></div>
+            <div id="b-lbl" style="margin-top:3px; font-size:10px;">CORE: 1500/1500</div>
+        </div>
     </div>
 
-    <!-- Active Graphics Viewport -->
-    <canvas id="canvas" width="420" height="370"></canvas>
-
-    <button class="btn-start" onclick="launchArcadeGame()">LAUNCH SPACE STARFIGHTER</button>
-    <div style="font-size: 10px; color: #557799; margin-top: 8px; font-weight: bold; line-height: 14px;">
-        FLIGHT: [◀ LEFT / RIGHT ▶] Arrow Keys | WEAPONS: Hold [SPACEBAR]<br>
-        <span style="color:#ff00ff;">SPECIAL ABILITY: Press [SHIFT] to raise a Plasma Wall and block bullets!</span>
+    <!-- Active Clicking Area Box -->
+    <div class="combat-arena" id="arena">
+        <!-- Giant locked Angry Face Boss Model -->
+        <div id="boss-avatar">😠</div>
     </div>
+
+    <!-- Special Ability Charge Slot -->
+    <button id="od-btn" class="btn-overdrive" onclick="activateSpecialOverdrive()" disabled>OVERDRIVE CORE: 0% [CHARGE AT 100%]</button>
+    <button id="start-btn" class="btn-start" onclick="runNeonEngine()">INITIALIZE MATCH</button>
 </div>
 
 <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const arena = document.getElementById('arena');
+    let gameRunning = false, playerHp = 100, score = 0, currentPhase = 1;
+    let bossHp = 1500, maxBossHp = 1500;
+    let odCharge = 0, overdriveActive = false, overdriveTimer = 0;
+    let loopClock, targetSpawnClock;
 
-    // Engine Tracking Variables
-    let gameActive = false, score = 0, playerHp = 100, currentPhase = 1;
-    let playerX = 195, playerSpeed = 7, keys = {};
-    let playerLasers = [], bossBullets = [], abilityTimer = 0, abilityCooldown = 0;
-    
-    // Boss Base Parameters 
-    let bossX = 160, bossY = 40, bossWidth = 100, bossHeight = 45, bossDir = 1;
-    let bossHp = 2000, maxBossHp = 2000, shootInterval = 0;
-
-    // Configured map of the 10 changing angry face difficulty levels
-    const phaseMap = {
-        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "😠", speed: 1.5, bulletFreq: 24 },
-        2: { name: "Ion Siege Carrier", color: "#00ffff", icon: "😠", speed: 1.9, bulletFreq: 22 },
-        3: { name: "Flame Core Engine", color: "#ff9900", icon: "😡", speed: 2.3, bulletFreq: 20 },
-        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "😡", speed: 2.7, bulletFreq: 18 },
-        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "狠", speed: 3.1, bulletFreq: 16 },
-        6: { name: "Singularity Core", color: "#9900cc", icon: "🤬", speed: 3.5, bulletFreq: 14 },
-        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "😈", speed: 3.9, bulletFreq: 12 },
-        8: { name: "Hyperion Outpost", color: "#ffff00", icon: "😈", speed: 4.3, bulletFreq: 10 },
-        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "👹", speed: 4.7, bulletFreq: 8 },
-        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "👺", speed: 5.4, bulletFreq: 6 }
+    // Phase tracking database keeping the boss angry face locked in but changing fury attributes
+    const phases = {
+        1: { name: "Glaring Sentinel", face: "😠", color: "#33ff33", dmg: 4, speed: 1100 },
+        2: { name: "Irritated Overlord", face: "😠", color: "#00ffff", dmg: 6, speed: 1000 },
+        3: { name: "Aggressive Matrix", face: "😡", color: "#00aaff", dmg: 9, speed: 950 },
+        4: { name: "Furious Mainframe", face: "😡", color: "#a000ff", dmg: 12, speed: 900 },
+        5: { name: "Raging Core Unit", face: "🤬", color: "#ff00ff", dmg: 16, speed: 850 },
+        6: { name: "Berserk Firewall", face: "🤬", color: "#ff0066", dmg: 20, speed: 800 },
+        7: { name: "Vengeful AI Core", face: "👿", color: "#ff3300", dmg: 24, speed: 750 },
+        8: { name: "Demonic Singularity", face: "👿", color: "#ffff00", dmg: 29, speed: 700 },
+        9: { name: "Doomsday Malfunction", face: "👹", color: "#ffffff", dmg: 35, speed: 650 },
+        10: { name: "Omega Lord of Fury", face: "👺", color: "#ff0000", dmg: 44, speed: 550 }
     };
 
-    window.addEventListener('keydown', (e) => { 
-        keys[e.code] = true; 
-        if (e.code === "Space" && gameActive) playerLasers.push({ x: playerX + 13, y: 330 });
-        if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && abilityCooldown <= 0 && gameActive) triggerDefensiveWall();
-    });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-    function launchArcadeGame() {
-        score = 0; playerHp = 100; currentPhase = 1; playerX = 195;
-        playerLasers = []; bossBullets = []; abilityTimer = 0; abilityCooldown = 0;
-        bossX = 160; bossHp = 2000; bossDir = 1; shootInterval = 0;
+    function runNeonEngine() {
+        // Clear runtime state
+        playerHp = 100; bossHp = 1500; score = 0; currentPhase = 1; odCharge = 0; overdriveActive = false;
+        document.getElementById('start-btn').style.display = "none";
+        document.querySelectorAll('.strike-node').forEach(n => n.remove());
         
-        gameActive = true;
-        document.getElementById('score-lbl').innerText = score;
-        document.getElementById('hull-lbl').innerText = playerHp + "%";
-        document.getElementById('phase-lbl').innerText = `P1: ${phaseMap[1].name}`;
-        document.getElementById('phase-lbl').style.color = phaseMap[1].color;
+        gameRunning = true;
+        syncHUD();
         
-        requestAnimationFrame(gameLoopEngine);
+        // Active Core Processing loops
+        loopClock = setInterval(engineTick, 50);
+        triggerTargetSpawnTimer();
     }
 
-    function triggerDefensiveWall() {
-        abilityTimer = 90; // Active for 1.5 seconds
-        abilityCooldown = 240; // Cooldown timing delay
+    function triggerTargetSpawnTimer() {
+        clearInterval(targetSpawnClock);
+        if (!gameRunning) return;
+        
+        // Scale nodes spawning frequency depending on active phase difficulty layouts
+        let spawnRate = overdriveActive ? 250 : phases[currentPhase].speed;
+        targetSpawnClock = setInterval(spawnCombatNode, spawnRate);
     }
 
-    function gameLoopEngine() {
-        if (!gameActive) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Fly Controls Logic
-        if (keys['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
-        if (keys['ArrowRight'] && playerX < canvas.width - 35) playerX += playerSpeed;
-
-        // Ability Clock Updates
-        if (abilityTimer > 0) abilityTimer--;
-        if (abilityCooldown > 0) abilityCooldown--;
-
-        // Draw Special Plasma Wall
-        if (abilityTimer > 0) {
-            ctx.fillStyle = "rgba(255, 0, 255, 0.4)";
-            ctx.strokeStyle = "#ff00ff";
-            ctx.lineWidth = 2;
-            ctx.fillRect(playerX - 15, 310, 60, 8);
-            ctx.strokeRect(playerX - 15, 310, 60, 8);
+    function spawnCombatNode() {
+        if (!gameRunning) return;
+        
+        // Strip out missed old nodes to penalize slow clicks
+        const oldNode = document.querySelector('.strike-node');
+        if (oldNode) {
+            oldNode.remove();
+            if (!overdriveActive) hitPlayer(phases[currentPhase].dmg);
         }
 
-        // Draw Player Spaceship Model
-        ctx.font = "24px Arial";
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText("🚀", playerX, 350);
-
-        // Boss Trajectory Cruise Tracking
-        bossX += bossDir * phaseMap[currentPhase].speed;
-        if (bossX < 5 || bossX > canvas.width - bossWidth - 5) bossDir *= -1;
-
-        // Draw Boss Container
-        ctx.fillStyle = "rgba(10, 15, 35, 0.85)";
-        ctx.strokeStyle = phaseMap[currentPhase].color;
-        ctx.lineWidth = 3;
-        ctx.fillRect(bossX, bossY, bossWidth, bossHeight);
-        ctx.strokeRect(bossX, bossY, bossWidth, bossHeight);
-
-        // Render Current Shifting Angry Face
-        ctx.font = "26px Arial";
-        ctx.fillText(phaseMap[currentPhase].icon, bossX + 36, bossY + 32);
-
-        // Draw Boss Health Bar 
-        ctx.fillStyle = "#222";
-        ctx.fillRect(bossX, bossY - 14, bossWidth, 6);
-        ctx.fillStyle = phaseMap[currentPhase].color;
-        ctx.fillRect(bossX, bossY - 14, (bossHp / maxBossHp) * bossWidth, 6);
-
-        // Boss Weapon Fire Intervals
-        shootInterval++;
-        if (shootInterval > phaseMap[currentPhase].bulletFreq) {
-            bossBullets.push({ x: bossX + 20, y: bossY + bossHeight, speed: 4 });
-            bossBullets.push({ x: bossX + 80, y: bossY + bossHeight, speed: 4 });
-            shootInterval = 0;
-        }
-
-        // Handle Moving Player Lasers
-        ctx.fillStyle = "#00ffff";
-        for (let l = playerLasers.length - 1; l >= 0; l--) {
-            let laser = playerLasers[l];
-            laser.y -= 9;
-            ctx.fillRect(laser.x, laser.y, 4, 10);
-
-            if (laser.y < 0) { playerLasers.splice(l, l); continue; }
-
-            // Collision Check against Boss
-            if (laser.x >= bossX && laser.x <= bossX + bossWidth && laser.y >= bossY && laser.y <= bossY + bossHeight) {
-                playerLasers.splice(l, 1);
-                damageBossTargetCore(20);
+        const node = document.createElement('div');
+        node.className = 'strike-node';
+        node.innerText = "⚔️";
+        
+        // Random Coordinate Calculations Inside Board Limits
+        let maxW = arena.clientWidth - 60;
+        let maxH = arena.clientHeight - 130; // Avoid overlapping boss head zone
+        
+        node.style.left = Math.floor(Math.random() * maxW + 5) + 'px';
+        node.style.top = Math.floor(Math.random() * maxH + 110) + 'px';
+        
+        // Collision Trigger Click event action loop
+        node.onclick = (e) => {
+            e.stopPropagation();
+            node.remove();
+            
+            let strikePower = overdriveActive ? 60 : 35;
+            damageBoss(strikePower);
+            
+            if (odCharge < 100 && !overdriveActive) {
+                odCharge = Math.min(100, odCharge + 8);
+                updateODButton();
             }
-        }
+            
+            spawnCombatNode(); // Generate immediate replacement target
+        };
 
-        // Handle Moving Enemy Projectiles
-        ctx.fillStyle = "#ff3333";
-        for (let b = bossBullets.length - 1; b >= 0; b--) {
-            let bullet = bossBullets[b];
-            bullet.y += bullet.speed;
-            ctx.fillRect(bullet.x, bullet.y, 6, 6);
-
-            if (bullet.y > canvas.height) { bossBullets.splice(b, 1); continue; }
-
-            // Block and clear bullets using the Defensive Special Ability
-            if (abilityTimer > 0 && bullet.x >= playerX - 15 && bullet.x <= playerX + 45 && bullet.y >= 310 && bullet.y <= 320) {
-                bossBullets.splice(b, 1);
-                score += 5;
-                document.getElementById('score-lbl').innerText = score;
-                continue;
-            }
-
-            // Damage player if hit
-            if (bullet.x >= playerX && bullet.x <= playerX + 24 && bullet.y >= 330 && bullet.y <= 355) {
-                bossBullets.splice(b, 1);
-                inflictDamageOnHero(10);
-            }
-        }
-
-        requestAnimationFrame(gameLoopEngine);
+        arena.appendChild(node);
     }
 
-    function damageBossTargetCore(amt) {
+    function activateSpecialOverdrive() {
+        if (odCharge < 100 || overdriveActive) return;
+        overdriveActive = true;
+        overdriveTimer = 60; // 3 seconds at 20 ticks per sec
+        document.getElementById('od-btn').style.background = "#ffff00";
+        document.getElementById('od-btn').style.color = "#000";
+        document.getElementById('boss-avatar').style.transform = "translateX(-50%) scale(0.8)";
+        triggerTargetSpawnTimer();
+    }
+
+    function engineTick() {
+        if (!gameRunning) return;
+
+        if (overdriveActive) {
+            overdriveTimer--;
+            document.getElementById('od-btn').innerText = `OVERDRIVE CORE ACTIVE: ${Math.ceil(overdriveTimer/20)}s`;
+            if (overdriveTimer <= 0) {
+                overdriveActive = false;
+                odCharge = 0;
+                updateODButton();
+                document.getElementById('boss-avatar').style.transform = "translateX(-50%) scale(1)";
+                triggerTargetSpawnTimer();
+            }
+        }
+    }
+
+    function damageBoss(amt) {
         bossHp -= amt;
-        score += 10;
-        document.getElementById('score-lbl').innerText = score;
+        if (bossHp <= 0) { bossHp = 0; resolveMatch(true); return; }
 
-        if (bossHp <= 0) {
-            bossHp = 0;
-            terminateSession(true);
-            return;
+        let targetPhase = window.currentPhase;
+        // 10 Phase checks calculus integration lines
+        let theoreticalPhase = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (theoreticalPhase > currentPhase && theoreticalPhase <= 10) {
+            currentPhase = theoreticalPhase;
+            triggerTargetSpawnTimer(); // Instantly apply updated rhythm speeds settings multiplier parameters
         }
-
-        // Check if boss shifts into the next Fury Phase
-        let computedLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
-        if (computedLvl > currentPhase && computedLvl <= 10) {
-            currentPhase = computedLvl;
-            document.getElementById('phase-lbl').innerText = `P${currentPhase}: ${phaseMap[currentPhase].name}`;
-            document.getElementById('phase-lbl').style.color = phaseMap[currentPhase].color;
-        }
+        syncHUD();
     }
 
-    function inflictDamageOnHero(amt) {
+    function hitPlayer(amt) {
         playerHp -= amt;
         if (playerHp < 0) playerHp = 0;
-        document.getElementById('hull-lbl').innerText = playerHp + "%";
-        if (playerHp <= 0) terminateSession(false);
+        syncHUD();
+        
+        // Impact screen shake visual layout triggers
+        arena.style.borderColor = "#ff0000";
+        setTimeout(() => arena.style.borderColor = "#00ffff", 100);
+
+        if (playerHp <= 0) resolveMatch(false);
     }
 
-    function terminateSession(didWin) {
-        gameActive = false;
-        ctx.fillStyle = "rgba(3, 3, 12, 0.95)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.font = "bold 18px monospace";
-        ctx.fillStyle = didWin ? "#00ffcc" : "#ff3333";
-        ctx.fillText(didWin ? "VICTORY! ALL 10 PHASES CLEARED" : "HULL TERMINATED - GAME OVER", 40, 180);
-    }
+    function updateODButton() {
+        const btn = document.getElementById('od-btn');
+        btn.disabled = odCharge < 100;
+        if (odCharge >= 100) {
+            btn.innerText = "⚡ UNLEASH OVERDRIVE TACTICS [READY]";
+            btn.style.background = "#ff00ff";
+        } else {
+            btn.innerText = `OVERDRIVE CORE: ${odCharge}% [CHARGE AT 100%]`;
+            btn.style.background = "#442244";
+
