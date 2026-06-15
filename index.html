@@ -3,153 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>10-Phase Boss Gauntlet</title>
+    <title>Starfighter Sector Defense</title>
     <style>
-        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #222; padding: 20px; border-radius: 10px; border: 2px solid #444; }
-        .health-bar { background: #444; width: 100%; height: 25px; border-radius: 5px; margin: 10px 0; overflow: hidden; position: relative; }
-        .health-fill { height: 100%; width: 100%; transition: width 0.3s; }
-        #boss-health { background: #ff3333; }
-        #player-health { background: #33ff33; }
-        .bar-text { position: absolute; width: 100%; text-align: center; font-weight: bold; line-height: 25px; color: white; }
-        button { background: #444; color: white; border: none; padding: 12px 24px; margin: 5px; font-size: 16px; border-radius: 5px; cursor: pointer; }
-        button:hover { background: #666; }
-        #log { background: #000; padding: 10px; height: 120px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 14px; border: 1px solid #333; margin-top: 15px; }
-        .phase-banner { font-size: 24px; color: #ffcc00; font-weight: bold; margin: 10px 0; }
+        body { background: #03030a; color: #00ffcc; font-family: 'Courier New', monospace; text-align: center; padding: 10px; margin: 0; }
+        .container { max-width: 700px; margin: 10px auto; background: #090914; padding: 15px; border-radius: 8px; border: 2px solid #00ffcc; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
+        
+        /* Tactical Space Sector Viewport */
+        .arena { position: relative; width: 100%; height: 260px; background: #020205; border: 2px dashed #005544; border-radius: 4px; margin-bottom: 15px; overflow: hidden; }
+        .arena::after { content: "•  .  *   .   •   *  .  •"; position: absolute; color: #444; width: 100%; font-size: 20px; top: 20%; left: 0; }
+        
+        /* Ship Models */
+        .ship { position: absolute; bottom: 40px; width: 70px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: all 0.15s; }
+        #player-ship { left: 50px; border-left: 4px solid #00ff66; filter: drop-shadow(0 0 8px #00ff66); }
+        #boss-ship { right: 50px; width: 100px; height: 110px; bottom: 25px; border-right: 4px solid #ff3333; filter: drop-shadow(0 0 10px #ff3333); font-size: 24px; }
+        
+        /* Tactical Systems FX */
+        .laser { position: absolute; width: 25px; height: 6px; border-radius: 3px; display: none; z-index: 10; }
+        .deflector-grid { position: absolute; width: 90px; height: 110px; border: 3px double #00ffff; border-radius: 30%; left: 35px; bottom: 25px; display: none; box-shadow: 0 0 15px rgba(0,255,255,0.5); }
+        .damage-pop { position: absolute; font-size: 20px; font-weight: bold; animation: floatUp 0.7s ease-out forwards; z-index: 20; pointer-events: none; }
+        
+        /* Control Dashboard Setup */
+        .hud { display: flex; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+        .hud-panel { background: #0c101f; padding: 10px; border-radius: 4px; width: 48%; border: 1px solid #005544; text-align: left; }
+        .bar { background: #222; width: 100%; height: 12px; border-radius: 2px; overflow: hidden; margin-top: 5px; border: 1px solid #444; }
+        .fill { height: 100%; width: 100%; transition: width 0.15s; }
+        
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        button { background: #0b1a24; color: #00ffcc; border: 1px solid #00ffcc; padding: 14px; font-size: 13px; font-weight: bold; font-family: 'Courier New', monospace; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
+        button:active { transform: scale(0.97); }
+        
+        #terminal-log { background: #020205; border: 1px solid #005544; padding: 8px; height: 75px; overflow-y: auto; font-size: 12px; text-align: left; color: #00ff66; }
+
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>The Ultimate Showdown</h1>
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px;">📡 SYSTEM SECTOR ENGAGED 📡</div>
     
-    <!-- Boss UI -->
-    <div id="boss-name" class="phase-banner">Phase 1: Shadow Apprentice</div>
-    <div class="health-bar">
-        <div id="boss-health" class="health-fill"></div>
-        <div id="boss-text" class="bar-text">Boss HP: 1000 / 1000</div>
+    <!-- Arena Viewport -->
+    <div class="arena" id="space-arena">
+        <div id="player-ship" class="ship">🚀<br><span style="font-size:10px; color:#00ff66; margin-top:5px;">STRF-01</span></div>
+        <div id="boss-ship" class="ship">🛸<br><span id="phase-tag" style="font-size:11px; color:#ffcc00; margin-top:5px;">THREAT: 1</span></div>
+        
+        <div id="deflector-visual" class="deflector-grid"></div>
+        <div id="laser-beam" class="laser"></div>
     </div>
 
-    <!-- Player UI -->
-    <h3>Your Status</h3>
-    <div class="health-bar">
-        <div id="player-health" class="health-fill"></div>
-        <div id="player-text" class="bar-text">Player HP: 100 / 100</div>
+    <!-- Interface Readouts -->
+    <div class="hud">
+        <div class="hud-panel">
+            <div style="color: #00ff66; font-weight: bold; font-size: 12px;">HULL INTEGRITY</div>
+            <div class="bar"><div id="p-fill" class="fill" style="background: #00ff66;"></div></div>
+            <div id="p-lbl" style="font-size: 11px; margin-top: 3px; color:#88ffbb;">HP: 100/100</div>
+        </div>
+        <div class="hud-panel">
+            <div id="b-name" style="color: #ff3333; font-weight: bold; font-size: 12px;">P1: Drone Vanguard</div>
+            <div class="bar"><div id="b-fill" class="fill" style="background: #ff3333;"></div></div>
+            <div id="b-lbl" style="font-size: 11px; margin-top: 3px; color:#ff8888;">CAPITAL HP: 1000/1000</div>
+        </div>
     </div>
-    <div id="shield-status" style="color: #33ccff; font-weight: bold;">Shield: INACTIVE</div>
 
-    <!-- The 3 Abilities -->
-    <div style="margin-top: 20px;">
-        <button onclick="useAbility('attack')">⚔️ Strike</button>
-        <button onclick="useAbility('heal')">❤️ Rejuvenate</button>
-        <button onclick="useAbility('shield')">🛡️ Aegis Barrier</button>
+    <!-- Ship Controls Framework -->
+    <div class="controls">
+        <button onclick="engageSystem('weapons')">⚡ LASER CANNON</button>
+        <button onclick="engageSystem('repair')">🔧 NANO REPAIR</button>
+        <button onclick="engageSystem('shield')">🛡️ DEFLECTOR</button>
     </div>
 
-    <div id="log">Battle logged... Defeat the boss through all 10 transformations!</div>
+    <p style="font-size: 11px; color: #005544; text-align: left; margin: 10px 0 3px 5px; font-weight: bold;">COMBAT TERMINAL FEED:</p>
+    <div id="terminal-log"></div>
 </div>
 
 <script>
-    // Game State
-    let maxBossHp = 1000;
-    let bossHp = 1000;
-    let playerMaxHp = 100;
-    let playerHp = 100;
-    let isShielded = false;
-    let currentPhase = 1;
+    let maxBossHp = 1000, bossHp = 1000;
+    let playerMaxHp = 100, playerHp = 100;
+    let isShielded = false, currentPhase = 1, coreLock = false;
 
-    // Boss Phase Configuration (1 to 10)
-    const phases = {
-        1: { name: "Shadow Apprentice", damage: 6 },
-        2: { name: "Flame Adept", damage: 9 },
-        3: { name: "Frost Knight", damage: 12 },
-        4: { name: "Void Stalker", damage: 15 },
-        5: { name: "Storm Summoner", damage: 18 },
-        6: { name: "Corrupted General", damage: 22 },
-        7: { name: "Abyss Archmage", damage: 26 },
-        8: { name: "Dragon Soul Avatar", damage: 31 },
-        9: { name: "Chaos Harbinger", damage: 37 },
-        10: { name: "God-King of Ruin", damage: 45 }
+    const threatPhases = {
+        1: { name: "Drone Vanguard", damage: 6, hullColor: "rgba(139,0,0,0.3)", unit: "🛸" },
+        2: { name: "Scout Dreadnought", damage: 9, hullColor: "rgba(255,69,0,0.3)", unit: "🛸" },
+        3: { name: "Ion Cruiser", damage: 13, hullColor: "rgba(218,165,32,0.3)", unit: "🛰️" },
+        4: { name: "Warp Interceptor", damage: 17, hullColor: "rgba(75,0,130,0.3)", unit: "🛸" },
+        5: { name: "Plasma Destroyer", damage: 21, hullColor: "rgba(0,128,128,0.3)", unit: "👾" },
+        6: { name: "Heavy Siege Carrier", damage: 25, hullColor: "rgba(47,79,79,0.3)", unit: "🛸" },
+        7: { name: "Stealth Ravager", damage: 30, hullColor: "rgba(186,85,211,0.3)", unit: "🌌" },
+        8: { name: "Hyperion Flagship", damage: 35, hullColor: "rgba(255,20,147,0.3)", unit: "🪐" },
+        9: { name: "Singularity Core", damage: 41, hullColor: "rgba(255,140,0,0.3)", unit: "☄️" },
+        10: { name: "Omega Doomsday Weapon", damage: 48, hullColor: "rgba(255,0,0,0.5)", unit: "💥" }
     };
 
-    function logMessage(msg) {
-        const log = document.getElementById('log');
-        log.innerHTML += `<div>${msg}</div>`;
-        log.scrollTop = log.scrollHeight;
+    function writeTerminal(text) {
+        const term = document.getElementById('terminal-log');
+        term.innerHTML += `<div>[SECURE_LOG] ${text}</div>`;
+        term.scrollTop = term.scrollHeight;
     }
 
-    function updateUI() {
-        // Update Boss
-        const bossPct = Math.max(0, (bossHp / maxBossHp) * 100);
-        document.getElementById('boss-health').style.width = bossPct + '%';
-        document.getElementById('boss-text').innerText = `Boss HP: ${Math.ceil(bossHp)} / ${maxBossHp}`;
-        document.getElementById('boss-name').innerText = `Phase ${currentPhase}: ${phases[currentPhase].name}`;
-
-        // Update Player
-        const playerPct = Math.max(0, (playerHp / playerMaxHp) * 100);
-        document.getElementById('player-health').style.width = playerPct + '%';
-        document.getElementById('player-text').innerText = `Player HP: ${playerHp} / ${playerMaxHp}`;
-        document.getElementById('shield-status').innerText = isShielded ? "Shield: ACTIVE (Blocks 50% Damage)" : "Shield: INACTIVE";
-    }
-
-    function useAbility(type) {
-        if (playerHp <= 0 || bossHp <= 0) return;
-
-        if (type === 'attack') {
-            let dmg = Math.floor(Math.random() * 15) + 15; // 15-30 dmg
-            bossHp -= dmg;
-            logMessage(`⚔️ You strike the boss for ${dmg} damage.`);
-            checkPhaseProgression();
-        } 
-        else if (type === 'heal') {
-            let heal = 35;
-            playerHp = Math.min(playerMaxHp, playerHp + heal);
-            logMessage(`❤️ You cast Rejuvenate and heal for ${heal} HP.`);
-        } 
-        else if (type === 'shield') {
-            isShielded = true;
-            logMessage(`🛡️ You raise your Aegis Barrier for the next turn.`);
-        }
-
-        // If boss survives, it counter-attacks
-        if (bossHp > 0) {
-            bossTurn();
-        } else {
-            logMessage("🎉 VICTORY! You have vanquished all 10 phases of the boss!");
-        }
-        updateUI();
-    }
-
-    function checkPhaseProgression() {
-        // Calculate what phase the boss should be based on remaining HP (every 100 HP dropped = 1 phase lower)
-        let calculatedPhase = 11 - Math.ceil(bossHp / 100);
-        if (calculatedPhase > currentPhase && calculatedPhase <= 10) {
-            currentPhase = calculatedPhase;
-            logMessage(`⚠️ WARNING: The boss morphs into Phase ${currentPhase}: ${phases[currentPhase].name}!`);
-        }
-    }
-
-    function bossTurn() {
-        let baseDmg = phases[currentPhase].damage;
-        // Add minor variance to boss attacks (+/- 2)
-        let actualDmg = Math.floor(Math.random() * 5) + (baseDmg - 2);
+    function triggerPop(targetId, amt, color) {
+        const target = document.getElementById(targetId);
+        const rect = target.getBoundingClientRect();
+        const arenaRect = document.getElementById('space-arena').getBoundingClientRect();
         
-        if (isShielded) {
-            actualDmg = Math.floor(actualDmg * 0.5); // Shield blocks half damage
-            isShielded = false; // Shield breaks after one hit
-            logMessage(`🛡️ Your barrier absorbs half the impact!`);
-        }
-
-        playerHp -= actualDmg;
-        logMessage(`💥 The ${phases[currentPhase].name} hits you for ${actualDmg} damage.`);
-
-        if (playerHp <= 0) {
-            playerHp = 0;
-            logMessage("💀 GAME OVER! You were crushed by the boss.");
-        }
+        const pop = document.createElement('div');
+        pop.className = 'damage-pop';
+        pop.innerText = amt;
+        pop.style.color = color;
+        pop.style.left = (rect.left - arenaRect.left + (rect.width/2) - 10) + 'px';
+        pop.style.top = (rect.top - arenaRect.top - 15) + 'px';
+        
+        document.getElementById('space-arena').appendChild(pop);
+        setTimeout(() => pop.remove(), 700);
     }
 
-    // Initial draw
-    updateUI();
-</script>
-</body>
-</html>
+    function renderDisplay() {
+        const bPct = Math.max(0, (bossHp / maxBossHp) * 100);
+        document.getElementById('b-fill').style.width = bPct + '%';
+        document.getElementById('b-lbl').innerText = `CAPITAL HP: ${Math.ceil(bossHp)} / ${maxBossHp}`;
+        document.getElementById('b-name').innerText = `P${currentPhase}: ${threatPhases[currentPhase].name}`;
+        
+        const pPct = Math.max(0, (playerHp / playerMaxHp) * 100);
+        document.getElementById('p-fill').style.width = pPct + '%';
+        document.getElementById('p-lbl').innerText = `HP: ${playerHp} / ${playerMaxHp}`;
+
+        const bSprite = document.getElementById('boss-ship');
+        bSprite.style.backgroundColor = threatPhases[currentPhase].hullColor;
+        bSprite.innerHTML = `${threatPhases[currentPhase].unit}<br><span id="phase-tag" style="font-size:10px; color:#ffcc00;">THREAT: ${currentPhase}</span>`;
+
+        document.getElementById('deflector-visual').style.display = isShielded ? 'block' : 'none';
+    }
+
+    function engageSystem(system) {
+        if (playerHp <= 0 || bossHp <= 0 || coreLock) return;
+        coreLock = true;
+
+        const beam = document.getElementById('laser-beam');
+        beam.style.display = "block";
+        
+        if (system === 'weapons') {
+            beam.style.background = "#00ff66";
+            beam.style.boxShadow = "0 0 8px #00ff66";
+            beam.style.left = "90px";
+            beam.style.bottom = "80px";
+            
+            let currentX = 90;
+            let cycle = setInterval(() => {
+                currentX += 18;
+                beam.style.left = currentX + "px";
+                if (currentX >= 510) {
+                    clearInterval(cycle);
+                    beam.style.display = "none";
+                    
+                    let baseDmg = Math.floor(Math.random() * 10) + 20;
+                    bossHp -= baseDmg;
+                    triggerPop('boss-ship', `-${baseDmg}`, '#ff3333');
+                    document.getElementById('boss-ship').style.animation = "shake 0.15s alternate 2";
+                    writeTerminal(`Lasers impacting target armor: Done <span style="color:#ff3333">-${baseDmg} Hull</span>.`);
+                    
+                    setTimeout(() => document.getElementById('boss-ship').style.animation = "", 150);
+                    evaluateThreatPhase();
+                    processNextTurn();
+                }
+            }, 16);
+        } 
+        else if (system === 'repair') {
+            let hullFix = 32;
+            playerHp = Math.min(playerMaxHp, playerHp + hullFix);
+            triggerPop('player-ship', `+${hullFix}`, '#00ff66');
