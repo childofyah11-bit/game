@@ -3,172 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Starfighter Sector Defense</title>
+    <title>Quantum Core Decryptor</title>
     <style>
-        body { background: #03030a; color: #00ffcc; font-family: 'Courier New', monospace; text-align: center; padding: 10px; margin: 0; }
-        .container { max-width: 700px; margin: 10px auto; background: #090914; padding: 15px; border-radius: 8px; border: 2px solid #00ffcc; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
+        body { background: #020202; color: #33ff33; font-family: 'Courier New', monospace; text-align: center; padding: 10px; margin: 0; }
+        .container { max-width: 650px; margin: 15px auto; background: #000b00; padding: 20px; border-radius: 4px; border: 2px solid #00aa00; box-shadow: 0 0 20px rgba(0, 255, 0, 0.2); }
         
-        /* Tactical Space Sector Viewport */
-        .arena { position: relative; width: 100%; height: 260px; background: #020205; border: 2px dashed #005544; border-radius: 4px; margin-bottom: 15px; overflow: hidden; }
-        .arena::after { content: "•  .  *   .   •   *  .  •"; position: absolute; color: #444; width: 100%; font-size: 20px; top: 20%; left: 0; }
+        /* The Cyber-Matrix Grid Display Screen */
+        .mainframe { position: relative; width: 100%; height: 240px; background: #000500; border: 1px solid #00ff00; border-radius: 2px; margin-bottom: 15px; overflow: hidden; }
+        .grid-lines { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(0,50,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,50,0,0.1) 1px, transparent 1px); background-size: 20px 20px; }
         
-        /* Ship Models */
-        .ship { position: absolute; bottom: 40px; width: 70px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: all 0.15s; }
-        #player-ship { left: 50px; border-left: 4px solid #00ff66; filter: drop-shadow(0 0 8px #00ff66); }
-        #boss-ship { right: 50px; width: 100px; height: 110px; bottom: 25px; border-right: 4px solid #ff3333; filter: drop-shadow(0 0 10px #ff3333); font-size: 24px; }
+        /* Cyber Icons Nodes */
+        .node { position: absolute; bottom: 50px; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
+        #hacker-node { left: 40px; border: 1px dashed #33ff33; background: rgba(0,255,0,0.05); }
+        #ai-core { right: 40px; width: 110px; height: 110px; bottom: 35px; border: 1px solid #ff3333; background: rgba(255,0,0,0.05); font-size: 28px; transition: all 0.2s; }
         
-        /* Tactical Systems FX */
-        .laser { position: absolute; width: 25px; height: 6px; border-radius: 3px; display: none; z-index: 10; }
-        .deflector-grid { position: absolute; width: 90px; height: 110px; border: 3px double #00ffff; border-radius: 30%; left: 35px; bottom: 25px; display: none; box-shadow: 0 0 15px rgba(0,255,255,0.5); }
-        .damage-pop { position: absolute; font-size: 20px; font-weight: bold; animation: floatUp 0.7s ease-out forwards; z-index: 20; pointer-events: none; }
+        /* Animation Packets */
+        .data-packet { position: absolute; width: 14px; height: 14px; border-radius: 3px; display: none; z-index: 10; font-size: 12px; line-height: 14px; text-align: center; font-weight: bold; }
+        .firewall-shield { position: absolute; width: 90px; height: 90px; border: 2px solid #00ffff; left: 34px; bottom: 44px; display: none; box-shadow: 0 0 10px #00ffff; }
+        .floating-text { position: absolute; font-size: 18px; font-weight: bold; animation: alertRise 0.6s ease-out forwards; z-index: 20; pointer-events: none; }
         
-        /* Control Dashboard Setup */
-        .hud { display: flex; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
-        .hud-panel { background: #0c101f; padding: 10px; border-radius: 4px; width: 48%; border: 1px solid #005544; text-align: left; }
-        .bar { background: #222; width: 100%; height: 12px; border-radius: 2px; overflow: hidden; margin-top: 5px; border: 1px solid #444; }
-        .fill { height: 100%; width: 100%; transition: width 0.15s; }
+        /* UI Panels & Script Slots */
+        .status-rack { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+        .status-box { background: #001100; padding: 8px; width: 48%; border: 1px solid #005500; text-align: left; }
+        .meter { background: #112211; width: 100%; height: 10px; overflow: hidden; margin-top: 5px; border: 1px solid #004400; }
+        .meter-fill { height: 100%; width: 100%; transition: width 0.2s; }
         
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        button { background: #0b1a24; color: #00ffcc; border: 1px solid #00ffcc; padding: 14px; font-size: 13px; font-weight: bold; font-family: 'Courier New', monospace; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
-        button:active { transform: scale(0.97); }
+        .deck-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        button { background: #001500; color: #33ff33; border: 1px solid #00ff00; padding: 12px; font-size: 12px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; }
+        button:hover { background: #00ff00; color: #000; box-shadow: 0 0 8px #00ff00; }
+        button:active { transform: scale(0.98); }
         
-        #terminal-log { background: #020205; border: 1px solid #005544; padding: 8px; height: 75px; overflow-y: auto; font-size: 12px; text-align: left; color: #00ff66; }
+        #scrolling-terminal { background: #000200; border: 1px solid #004400; padding: 8px; height: 90px; overflow-y: auto; font-size: 11px; text-align: left; color: #33cc33; }
 
-        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+        @keyframes alertRise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-35px); opacity: 0; } }
+        @keyframes GlitchShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 60% { transform: translateX(5px); } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div style="font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px;">📡 SYSTEM SECTOR ENGAGED 📡</div>
+    <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; letter-spacing: 3px; color: #00ff00;">⚡ MAINFRAME BREACH IN PROGRESS ⚡</div>
     
-    <!-- Arena Viewport -->
-    <div class="arena" id="space-arena">
-        <div id="player-ship" class="ship">🚀<br><span style="font-size:10px; color:#00ff66; margin-top:5px;">STRF-01</span></div>
-        <div id="boss-ship" class="ship">🛸<br><span id="phase-tag" style="font-size:11px; color:#ffcc00; margin-top:5px;">THREAT: 1</span></div>
+    <!-- Mainframe Grid Monitor -->
+    <div class="mainframe" id="matrix-display">
+        <div class="grid-lines"></div>
+        <div id="hacker-node" class="node">👨‍💻<br><span style="font-size:9px; color:#33ff33; margin-top:4px;">LOCAL_IP</span></div>
+        <div id="ai-core" class="node">🧠<br><span id="layer-tag" style="font-size:10px; color:#ffcc00; margin-top:4px;">SEC_LVL: 1</span></div>
         
-        <div id="deflector-visual" class="deflector-grid"></div>
-        <div id="laser-beam" class="laser"></div>
+        <div id="firewall-visual" class="firewall-shield"></div>
+        <div id="data-beam" class="data-packet"></div>
     </div>
 
-    <!-- Interface Readouts -->
-    <div class="hud">
-        <div class="hud-panel">
-            <div style="color: #00ff66; font-weight: bold; font-size: 12px;">HULL INTEGRITY</div>
-            <div class="bar"><div id="p-fill" class="fill" style="background: #00ff66;"></div></div>
-            <div id="p-lbl" style="font-size: 11px; margin-top: 3px; color:#88ffbb;">HP: 100/100</div>
+    <!-- Interface Matrix Analytics -->
+    <div class="status-rack">
+        <div class="status-box">
+            <div style="color: #33ff33; font-weight: bold; font-size: 11px;">DECK PORT PROXITY</div>
+            <div class="meter"><div id="p-fill" class="meter-fill" style="background: #33ff33;"></div></div>
+            <div id="p-lbl" style="font-size: 11px; margin-top: 3px;">SIGNAL: 100%</div>
         </div>
-        <div class="hud-panel">
-            <div id="b-name" style="color: #ff3333; font-weight: bold; font-size: 12px;">P1: Drone Vanguard</div>
-            <div class="bar"><div id="b-fill" class="fill" style="background: #ff3333;"></div></div>
-            <div id="b-lbl" style="font-size: 11px; margin-top: 3px; color:#ff8888;">CAPITAL HP: 1000/1000</div>
+        <div class="status-box">
+            <div id="b-name" style="color: #ff3333; font-weight: bold; font-size: 11px;">L1: Firewall Gateway</div>
+            <div class="meter"><div id="b-fill" class="meter-fill" style="background: #ff3333;"></div></div>
+            <div id="b-lbl" style="font-size: 11px; margin-top: 3px;">CORE INTEGRITY: 1000/1000</div>
         </div>
     </div>
 
-    <!-- Ship Controls Framework -->
-    <div class="controls">
-        <button onclick="engageSystem('weapons')">⚡ LASER CANNON</button>
-        <button onclick="engageSystem('repair')">🔧 NANO REPAIR</button>
-        <button onclick="engageSystem('shield')">🛡️ DEFLECTOR</button>
+    <!-- Script Injection Board -->
+    <div class="deck-buttons">
+        <button onclick="runScript('brute')">[BRUTE_FORCE]</button>
+        <button onclick="runScript('patch')">[INJECT_PATCH]</button>
+        <button onclick="runScript('proxy')">[LOAD_PROXY]</button>
     </div>
 
-    <p style="font-size: 11px; color: #005544; text-align: left; margin: 10px 0 3px 5px; font-weight: bold;">COMBAT TERMINAL FEED:</p>
-    <div id="terminal-log"></div>
+    <p style="font-size: 11px; color: #005500; text-align: left; margin: 12px 0 2px 2px; font-weight: bold;">CONSOLE TERMINAL READOUT:</p>
+    <div id="scrolling-terminal"></div>
 </div>
 
 <script>
     let maxBossHp = 1000, bossHp = 1000;
     let playerMaxHp = 100, playerHp = 100;
-    let isShielded = false, currentPhase = 1, coreLock = false;
+    let isShielded = false, currentPhase = 1, threadLock = false;
 
-    const threatPhases = {
-        1: { name: "Drone Vanguard", damage: 6, hullColor: "rgba(139,0,0,0.3)", unit: "🛸" },
-        2: { name: "Scout Dreadnought", damage: 9, hullColor: "rgba(255,69,0,0.3)", unit: "🛸" },
-        3: { name: "Ion Cruiser", damage: 13, hullColor: "rgba(218,165,32,0.3)", unit: "🛰️" },
-        4: { name: "Warp Interceptor", damage: 17, hullColor: "rgba(75,0,130,0.3)", unit: "🛸" },
-        5: { name: "Plasma Destroyer", damage: 21, hullColor: "rgba(0,128,128,0.3)", unit: "👾" },
-        6: { name: "Heavy Siege Carrier", damage: 25, hullColor: "rgba(47,79,79,0.3)", unit: "🛸" },
-        7: { name: "Stealth Ravager", damage: 30, hullColor: "rgba(186,85,211,0.3)", unit: "🌌" },
-        8: { name: "Hyperion Flagship", damage: 35, hullColor: "rgba(255,20,147,0.3)", unit: "🪐" },
-        9: { name: "Singularity Core", damage: 41, hullColor: "rgba(255,140,0,0.3)", unit: "☄️" },
-        10: { name: "Omega Doomsday Weapon", damage: 48, hullColor: "rgba(255,0,0,0.5)", unit: "💥" }
+    const securityLayers = {
+        1: { name: "Firewall Gateway", power: 6, hexColor: "rgba(0,150,0,0.1)", avatar: "🧠" },
+        2: { name: "Proxy Deflector", power: 9, hexColor: "rgba(200,100,0,0.1)", avatar: "💾" },
+        3: { name: "IDS Scanner Engine", power: 13, hexColor: "rgba(150,150,0,0.1)", avatar: "📡" },
+        4: { name: "Encrypted Registry", power: 17, hexColor: "rgba(100,0,150,0.1)", avatar: "🖲️" },
+        5: { name: "Data Sandbox Node", power: 22, hexColor: "rgba(0,100,150,0.1)", avatar: "🔒" },
+        6: { name: "Logic Bomb Array", power: 26, hexColor: "rgba(80,80,80,0.1)", avatar: "💣" },
+        7: { name: "Honey-Pot Subnet", power: 31, hexColor: "rgba(180,50,150,0.1)", avatar: "🍯" },
+        8: { name: "Neural Sentinel Core", power: 36, hexColor: "rgba(200,0,100,0.1)", avatar: "👁️" },
+        9: { name: "Decoy Rootkit Matrix", power: 42, hexColor: "rgba(220,80,0,0.1)", avatar: "🪐" },
+        10: { name: "Quantum AI Singularity", power: 49, hexColor: "rgba(255,0,0,0.2)", avatar: "☄️" }
     };
 
-    function writeTerminal(text) {
-        const term = document.getElementById('terminal-log');
-        term.innerHTML += `<div>[SECURE_LOG] ${text}</div>`;
-        term.scrollTop = term.scrollHeight;
+    function printTerminal(txt) {
+        const out = document.getElementById('scrolling-terminal');
+        out.innerHTML += `<div>$ ${txt}</div>`;
+        out.scrollTop = out.scrollHeight;
     }
 
-    function triggerPop(targetId, amt, color) {
-        const target = document.getElementById(targetId);
-        const rect = target.getBoundingClientRect();
-        const arenaRect = document.getElementById('space-arena').getBoundingClientRect();
+    function floatFeedback(nodeId, str, color) {
+        const node = document.getElementById(nodeId);
+        const rect = node.getBoundingClientRect();
+        const displayRect = document.getElementById('matrix-display').getBoundingClientRect();
         
-        const pop = document.createElement('div');
-        pop.className = 'damage-pop';
-        pop.innerText = amt;
-        pop.style.color = color;
-        pop.style.left = (rect.left - arenaRect.left + (rect.width/2) - 10) + 'px';
-        pop.style.top = (rect.top - arenaRect.top - 15) + 'px';
+        const floatTxt = document.createElement('div');
+        floatTxt.className = 'floating-text';
+        floatTxt.innerText = str;
+        floatTxt.style.color = color;
+        floatTxt.style.left = (rect.left - displayRect.left + (rect.width/2) - 10) + 'px';
+        floatTxt.style.top = (rect.top - displayRect.top - 10) + 'px';
         
-        document.getElementById('space-arena').appendChild(pop);
-        setTimeout(() => pop.remove(), 700);
+        document.getElementById('matrix-display').appendChild(floatTxt);
+        setTimeout(() => floatTxt.remove(), 600);
     }
 
-    function renderDisplay() {
+    function renderTerminalScreen() {
         const bPct = Math.max(0, (bossHp / maxBossHp) * 100);
         document.getElementById('b-fill').style.width = bPct + '%';
-        document.getElementById('b-lbl').innerText = `CAPITAL HP: ${Math.ceil(bossHp)} / ${maxBossHp}`;
-        document.getElementById('b-name').innerText = `P${currentPhase}: ${threatPhases[currentPhase].name}`;
+        document.getElementById('b-lbl').innerText = `CORE INTEGRITY: ${Math.ceil(bossHp)} / ${maxBossHp}`;
+        document.getElementById('b-name').innerText = `L${currentPhase}: ${securityLayers[currentPhase].name}`;
         
         const pPct = Math.max(0, (playerHp / playerMaxHp) * 100);
         document.getElementById('p-fill').style.width = pPct + '%';
-        document.getElementById('p-lbl').innerText = `HP: ${playerHp} / ${playerMaxHp}`;
+        document.getElementById('p-lbl').innerText = `SIGNAL PROXITY: ${playerHp}%`;
 
-        const bSprite = document.getElementById('boss-ship');
-        bSprite.style.backgroundColor = threatPhases[currentPhase].hullColor;
-        bSprite.innerHTML = `${threatPhases[currentPhase].unit}<br><span id="phase-tag" style="font-size:10px; color:#ffcc00;">THREAT: ${currentPhase}</span>`;
+        const bSprite = document.getElementById('ai-core');
+        bSprite.style.backgroundColor = securityLayers[currentPhase].hexColor;
+        bSprite.style.borderColor = currentPhase === 10 ? "#ff0000" : "#00ff00";
+        bSprite.innerHTML = `${securityLayers[currentPhase].avatar}<br><span id="layer-tag" style="font-size:9px; color:#ffcc00;">SEC_LVL: ${currentPhase}</span>`;
 
-        document.getElementById('deflector-visual').style.display = isShielded ? 'block' : 'none';
+        document.getElementById('firewall-visual').style.display = isShielded ? 'block' : 'none';
     }
 
-    function engageSystem(system) {
-        if (playerHp <= 0 || bossHp <= 0 || coreLock) return;
-        coreLock = true;
+    function runScript(scriptType) {
+        if (playerHp <= 0 || bossHp <= 0 || threadLock) return;
+        threadLock = true;
 
-        const beam = document.getElementById('laser-beam');
+        const beam = document.getElementById('data-beam');
         beam.style.display = "block";
         
-        if (system === 'weapons') {
-            beam.style.background = "#00ff66";
-            beam.style.boxShadow = "0 0 8px #00ff66";
-            beam.style.left = "90px";
-            beam.style.bottom = "80px";
+        if (scriptType === 'brute') {
+            beam.innerText = "01";
+            beam.style.color = "#33ff33";
+            beam.style.left = "80px";
+            beam.style.bottom = "85px";
             
-            let currentX = 90;
-            let cycle = setInterval(() => {
-                currentX += 18;
-                beam.style.left = currentX + "px";
-                if (currentX >= 510) {
-                    clearInterval(cycle);
+            let posX = 80;
+            let tick = setInterval(() => {
+                posX += 20;
+                beam.style.left = posX + "px";
+                beam.innerText = Math.random() > 0.5 ? "10" : "01";
+                if (posX >= 480) {
+                    clearInterval(tick);
                     beam.style.display = "none";
                     
-                    let baseDmg = Math.floor(Math.random() * 10) + 20;
-                    bossHp -= baseDmg;
-                    triggerPop('boss-ship', `-${baseDmg}`, '#ff3333');
-                    document.getElementById('boss-ship').style.animation = "shake 0.15s alternate 2";
-                    writeTerminal(`Lasers impacting target armor: Done <span style="color:#ff3333">-${baseDmg} Hull</span>.`);
+                    let bitsCorrupted = Math.floor(Math.random() * 12) + 18;
+                    bossHp -= bitsCorrupted;
+                    floatFeedback('ai-core', `-${bitsCorrupted}b`, '#ff3333');
+                    document.getElementById('ai-core').style.animation = "GlitchShake 0.15s alternate 2";
+                    printTerminal(`EXECUTE: Brute Force Overflow script. Corrupted <span style="color:#ff3333">${bitsCorrupted} database sectors</span>.`);
                     
-                    setTimeout(() => document.getElementById('boss-ship').style.animation = "", 150);
-                    evaluateThreatPhase();
-                    processNextTurn();
-                }
-            }, 16);
-        } 
-        else if (system === 'repair') {
-            let hullFix = 32;
-            playerHp = Math.min(playerMaxHp, playerHp + hullFix);
-            triggerPop('player-ship', `+${hullFix}`, '#00ff66');
+gerPop('player-ship', `+${hullFix}`, '#00ff66');
