@@ -3,32 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Boss</title>
+    <title>Arcade Spaceship Gauntlet</title>
     <style>
-        body { background: #020208; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
-        .cabinet { max-width: 460px; margin: 5px auto; background: #0c0d18; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        body { background: #03030c; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
+        .cabinet { max-width: 460px; margin: 5px auto; background: #0c0d1a; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; border-radius: 6px; }
         #canvas { background: #000000; display: block; margin: 8px auto; border: 2px solid #222; }
-        .hud { display: flex; justify-content: space-between; background: #111424; padding: 8px; border: 1px solid #00ffcc; font-size: 11px; font-weight: bold; }
-        .btn { background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 10px 20px; font-size: 14px; font-weight: bold; font-family: monospace; cursor: pointer; margin-top: 5px; }
+        .hud { display: flex; justify-content: space-between; background: #121528; padding: 8px; border: 1px solid #00ffcc; font-size: 11px; font-weight: bold; }
+        .btn-start { background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px 24px; font-size: 14px; font-weight: bold; font-family: monospace; cursor: pointer; margin-top: 5px; box-shadow: 0 0 8px #ff00ff; }
+        .btn-start:hover { background: #00ffcc; color: #000; box-shadow: 0 0 12px #00ffcc; }
     </style>
 </head>
 <body>
 
 <div class="cabinet">
-    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">⚡ OMEGA BOSS GAUNTLET ⚡</div>
+    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">🛸 BOSS SHOWDOWN 🛸</div>
     
+    <!-- Real-time HUD Status Updates -->
     <div class="hud">
-        <div id="phase-lbl" style="color:#ff3333; font-size:12px;">PHASE 1: TARGET LOCKED</div>
+        <div id="phase-lbl" style="color:#ff3333; font-size:12px;">PHASE 1: TARGET ENGAGED</div>
         <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
         <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
+    <!-- Active Graphics Viewport -->
     <canvas id="canvas" width="420" height="370"></canvas>
 
-    <button class="btn" onclick="launchGame()">LAUNCH STARFIGHTER</button>
-    <div style="font-size: 10px; color: #557799; margin-top: 6px; font-weight: bold; line-height: 14px;">
-        STEER: [◀ LEFT / RIGHT ▶] Arrow Keys | PRIMARY WEAPONS: Hold [SPACEBAR]<br>
-        <span style="color:#ff00ff;">DEFENSIVE ABILITY: Press [SHIFT] to raise a Plasma Wall and block bullets!</span>
+    <button class="btn-start" onclick="launchArcadeGame()">LAUNCH SPACE STARFIGHTER</button>
+    <div style="font-size: 10px; color: #557799; margin-top: 8px; font-weight: bold; line-height: 14px;">
+        FLIGHT: [◀ LEFT / RIGHT ▶] Arrow Keys | WEAPONS: Hold [SPACEBAR]<br>
+        <span style="color:#ff00ff;">SPECIAL ABILITY: Press [SHIFT] to raise a Plasma Wall and block bullets!</span>
     </div>
 </div>
 
@@ -36,34 +39,37 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
+    // Engine Tracking Variables
     let gameActive = false, score = 0, playerHp = 100, currentPhase = 1;
     let playerX = 195, playerSpeed = 7, keys = {};
     let playerLasers = [], bossBullets = [], abilityTimer = 0, abilityCooldown = 0;
     
+    // Boss Base Parameters 
     let bossX = 160, bossY = 40, bossWidth = 100, bossHeight = 45, bossDir = 1;
     let bossHp = 2000, maxBossHp = 2000, shootInterval = 0;
 
+    // Configured map of the 10 changing angry face difficulty levels
     const phaseMap = {
-        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "😠", speed: 1.5, bulletFreq: 25 },
-        2: { name: "Ion Siege Cannon", color: "#00ffff", icon: "😠", speed: 2.0, bulletFreq: 22 },
-        3: { name: "Flame Core Engine", color: "#ff9900", icon: "😡", speed: 2.4, bulletFreq: 20 },
-        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "😡", speed: 2.8, bulletFreq: 18 },
-        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "🤬", speed: 3.2, bulletFreq: 16 },
-        6: { name: "Singularity Core", color: "#9900cc", icon: "🤬", speed: 3.6, bulletFreq: 14 },
-        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "😈", speed: 4.0, bulletFreq: 12 },
-        8: { name: "Hyperion Station", color: "#ffff00", icon: "😈", speed: 4.4, bulletFreq: 10 },
-        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "👹", speed: 4.8, bulletFreq: 8 },
-        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "👺", speed: 5.5, bulletFreq: 6 }
+        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "😠", speed: 1.5, bulletFreq: 24 },
+        2: { name: "Ion Siege Carrier", color: "#00ffff", icon: "😠", speed: 1.9, bulletFreq: 22 },
+        3: { name: "Flame Core Engine", color: "#ff9900", icon: "😡", speed: 2.3, bulletFreq: 20 },
+        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "😡", speed: 2.7, bulletFreq: 18 },
+        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "狠", speed: 3.1, bulletFreq: 16 },
+        6: { name: "Singularity Core", color: "#9900cc", icon: "🤬", speed: 3.5, bulletFreq: 14 },
+        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "😈", speed: 3.9, bulletFreq: 12 },
+        8: { name: "Hyperion Outpost", color: "#ffff00", icon: "😈", speed: 4.3, bulletFreq: 10 },
+        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "👹", speed: 4.7, bulletFreq: 8 },
+        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "👺", speed: 5.4, bulletFreq: 6 }
     };
 
     window.addEventListener('keydown', (e) => { 
         keys[e.code] = true; 
         if (e.code === "Space" && gameActive) playerLasers.push({ x: playerX + 13, y: 330 });
-        if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && abilityCooldown <= 0 && gameActive) triggerAbility();
+        if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && abilityCooldown <= 0 && gameActive) triggerDefensiveWall();
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-    function launchGame() {
+    function launchArcadeGame() {
         score = 0; playerHp = 100; currentPhase = 1; playerX = 195;
         playerLasers = []; bossBullets = []; abilityTimer = 0; abilityCooldown = 0;
         bossX = 160; bossHp = 2000; bossDir = 1; shootInterval = 0;
@@ -72,26 +78,30 @@
         document.getElementById('score-lbl').innerText = score;
         document.getElementById('hull-lbl').innerText = playerHp + "%";
         document.getElementById('phase-lbl').innerText = `P1: ${phaseMap[1].name}`;
+        document.getElementById('phase-lbl').style.color = phaseMap[1].color;
         
-        requestAnimationFrame(loop);
+        requestAnimationFrame(gameLoopEngine);
     }
 
-    function triggerAbility() {
-        abilityTimer = 90;
-        abilityCooldown = 300;
+    function triggerDefensiveWall() {
+        abilityTimer = 90; // Active for 1.5 seconds
+        abilityCooldown = 240; // Cooldown timing delay
     }
 
-    function loop() {
+    function gameLoopEngine() {
         if (!gameActive) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Fly Controls Logic
         if (keys['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
         if (keys['ArrowRight'] && playerX < canvas.width - 35) playerX += playerSpeed;
 
+        // Ability Clock Updates
         if (abilityTimer > 0) abilityTimer--;
         if (abilityCooldown > 0) abilityCooldown--;
 
+        // Draw Special Plasma Wall
         if (abilityTimer > 0) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.4)";
             ctx.strokeStyle = "#ff00ff";
@@ -100,27 +110,33 @@
             ctx.strokeRect(playerX - 15, 310, 60, 8);
         }
 
+        // Draw Player Spaceship Model
         ctx.font = "24px Arial";
         ctx.fillStyle = "#ffffff";
         ctx.fillText("🚀", playerX, 350);
 
+        // Boss Trajectory Cruise Tracking
         bossX += bossDir * phaseMap[currentPhase].speed;
         if (bossX < 5 || bossX > canvas.width - bossWidth - 5) bossDir *= -1;
 
-        ctx.fillStyle = "rgba(10, 15, 35, 0.8)";
+        // Draw Boss Container
+        ctx.fillStyle = "rgba(10, 15, 35, 0.85)";
         ctx.strokeStyle = phaseMap[currentPhase].color;
         ctx.lineWidth = 3;
         ctx.fillRect(bossX, bossY, bossWidth, bossHeight);
         ctx.strokeRect(bossX, bossY, bossWidth, bossHeight);
 
+        // Render Current Shifting Angry Face
         ctx.font = "26px Arial";
         ctx.fillText(phaseMap[currentPhase].icon, bossX + 36, bossY + 32);
 
+        // Draw Boss Health Bar 
         ctx.fillStyle = "#222";
         ctx.fillRect(bossX, bossY - 14, bossWidth, 6);
         ctx.fillStyle = phaseMap[currentPhase].color;
         ctx.fillRect(bossX, bossY - 14, (bossHp / maxBossHp) * bossWidth, 6);
 
+        // Boss Weapon Fire Intervals
         shootInterval++;
         if (shootInterval > phaseMap[currentPhase].bulletFreq) {
             bossBullets.push({ x: bossX + 20, y: bossY + bossHeight, speed: 4 });
@@ -128,20 +144,23 @@
             shootInterval = 0;
         }
 
+        // Handle Moving Player Lasers
         ctx.fillStyle = "#00ffff";
         for (let l = playerLasers.length - 1; l >= 0; l--) {
             let laser = playerLasers[l];
             laser.y -= 9;
             ctx.fillRect(laser.x, laser.y, 4, 10);
 
-            if (laser.y < 0) { playerLasers.splice(l, 1); continue; }
+            if (laser.y < 0) { playerLasers.splice(l, l); continue; }
 
+            // Collision Check against Boss
             if (laser.x >= bossX && laser.x <= bossX + bossWidth && laser.y >= bossY && laser.y <= bossY + bossHeight) {
                 playerLasers.splice(l, 1);
-                damageBossCore(20);
+                damageBossTargetCore(20);
             }
         }
 
+        // Handle Moving Enemy Projectiles
         ctx.fillStyle = "#ff3333";
         for (let b = bossBullets.length - 1; b >= 0; b--) {
             let bullet = bossBullets[b];
@@ -150,6 +169,7 @@
 
             if (bullet.y > canvas.height) { bossBullets.splice(b, 1); continue; }
 
+            // Block and clear bullets using the Defensive Special Ability
             if (abilityTimer > 0 && bullet.x >= playerX - 15 && bullet.x <= playerX + 45 && bullet.y >= 310 && bullet.y <= 320) {
                 bossBullets.splice(b, 1);
                 score += 5;
@@ -157,49 +177,49 @@
                 continue;
             }
 
+            // Damage player if hit
             if (bullet.x >= playerX && bullet.x <= playerX + 24 && bullet.y >= 330 && bullet.y <= 355) {
                 bossBullets.splice(b, 1);
-                inflictHeroDamage(10);
+                inflictDamageOnHero(10);
             }
         }
 
-        requestAnimationFrame(loop);
+        requestAnimationFrame(gameLoopEngine);
     }
 
-    function damageBossCore(amt) {
+    function damageBossTargetCore(amt) {
         bossHp -= amt;
         score += 10;
         document.getElementById('score-lbl').innerText = score;
 
         if (bossHp <= 0) {
             bossHp = 0;
-            endMatchSession(true);
+            terminateSession(true);
             return;
         }
 
-        let evaluatedLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
-        if (evaluatedLvl > currentPhase && evaluatedLvl <= 10) {
-            currentPhase = evaluatedLvl;
+        // Check if boss shifts into the next Fury Phase
+        let computedLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (computedLvl > currentPhase && computedLvl <= 10) {
+            currentPhase = computedLvl;
             document.getElementById('phase-lbl').innerText = `P${currentPhase}: ${phaseMap[currentPhase].name}`;
             document.getElementById('phase-lbl').style.color = phaseMap[currentPhase].color;
         }
     }
 
-    function inflictHeroDamage(amt) {
+    function inflictDamageOnHero(amt) {
         playerHp -= amt;
         if (playerHp < 0) playerHp = 0;
         document.getElementById('hull-lbl').innerText = playerHp + "%";
-        if (playerHp <= 0) endMatchSession(false);
+        if (playerHp <= 0) terminateSession(false);
     }
 
-    function endMatchSession(didWin) {
+    function terminateSession(didWin) {
         gameActive = false;
-        ctx.fillStyle = "rgba(2, 2, 8, 0.9)";
+        ctx.fillStyle = "rgba(3, 3, 12, 0.95)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = "bold 20px monospace";
-        ctx.fillStyle = didWin ? "#00ffcc";
-        ctx.fillText(didWin ? "VICTORY! ALL 10 PHASES DESTROYED" : "HULL DESTROYED - GAME OVER", 30, 175);
+        
+        ctx.font = "bold 18px monospace";
+        ctx.fillStyle = didWin ? "#00ffcc" : "#ff3333";
+        ctx.fillText(didWin ? "VICTORY! ALL 10 PHASES CLEARED" : "HULL TERMINATED - GAME OVER", 40, 180);
     }
-</script>
-</body>
-</html>
