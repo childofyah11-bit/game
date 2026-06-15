@@ -1,131 +1,155 @@
-import random
-import time
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10-Phase Boss Gauntlet</title>
+    <style>
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #222; padding: 20px; border-radius: 10px; border: 2px solid #444; }
+        .health-bar { background: #444; width: 100%; height: 25px; border-radius: 5px; margin: 10px 0; overflow: hidden; position: relative; }
+        .health-fill { height: 100%; width: 100%; transition: width 0.3s; }
+        #boss-health { background: #ff3333; }
+        #player-health { background: #33ff33; }
+        .bar-text { position: absolute; width: 100%; text-align: center; font-weight: bold; line-height: 25px; color: white; }
+        button { background: #444; color: white; border: none; padding: 12px 24px; margin: 5px; font-size: 16px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #666; }
+        #log { background: #000; padding: 10px; height: 120px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 14px; border: 1px solid #333; margin-top: 15px; }
+        .phase-banner { font-size: 24px; color: #ffcc00; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
 
-def print_delay(text, delay=0.5):
-    print(text)
-    time.sleep(delay)
-
-def play_game():
-    print_delay("=== WELCOME TO THE ULTIMATE SHOWDOWN ===")
-    print_delay("You face the Ever-Changing Overlord. He has 10 forms.")
-    print_delay("Defeat all 10 phases to claim ultimate victory!\n")
-
-    # Player Configuration
-    player_hp = 150
-    player_max_hp = 150
+<div class="container">
+    <h1>The Ultimate Showdown</h1>
     
-    # 5 Player abilities that unlock as you progress
-    player_abilities = [
-        {"name": "Slash", "unlocked": True, "desc": "Basic sword attack (15-25 dmg)"},
-        {"name": "Heal Light", "unlocked": True, "desc": "Restores 30 HP"},
-        {"name": "Fireball", "unlocked": False, "desc": "Unlocks at Phase 3. Heavy magic (35-50 dmg)"},
-        {"name": "Shield Wall", "unlocked": False, "desc": "Unlocks at Phase 5. Blocks 80% of next attack"},
-        {"name": "God Shatter", "unlocked": False, "desc": "Unlocks at Phase 8. Ultimate strike (70-100 dmg)"}
-    ]
+    <!-- Boss UI -->
+    <div id="boss-name" class="phase-banner">Phase 1: Shadow Apprentice</div>
+    <div class="health-bar">
+        <div id="boss-health" class="health-fill"></div>
+        <div id="boss-text" class="bar-text">Boss HP: 1000 / 1000</div>
+    </div>
 
-    # Boss Setup (10 Phases)
-    boss_phases = {
-        1:  {"name": "Squire of Shadow", "hp": 50,  "dmg": (5, 12),   "ability": "Stab"},
-        2:  {"name": "Iron Sentinel",    "hp": 70,  "dmg": (8, 15),   "ability": "Shield Bash"},
-        3:  {"name": "Flame Warlock",    "hp": 90,  "dmg": (12, 22),  "ability": "Ignite"},
-        4:  {"name": "Viper Assassin",   "hp": 110, "dmg": (15, 25),  "ability": "Poison Dagger"},
-        5:  {"name": "Storm Summoner",   "hp": 130, "dmg": (18, 30),  "ability": "Lightning Bolt"},
-        6:  {"name": "Blood Berserker",  "hp": 150, "dmg": (22, 35),  "ability": "Frenzy Strike"},
-        7:  {"name": "Necromancer King", "hp": 170, "dmg": (25, 40),  "ability": "Soul Drain"},
-        8:  {"name": "Dragon Aspect",    "hp": 200, "dmg": (30, 50),  "ability": "Inferno Breath"},
-        9:  {"name": "Void Terror",      "hp": 240, "dmg": (35, 60),  "ability": "Oblivion Beam"},
-        10: {"name": "GOD OF CHAOS",     "hp": 300, "dmg": (45, 75),  "ability": "Reality Collapse"}
+    <!-- Player UI -->
+    <h3>Your Status</h3>
+    <div class="health-bar">
+        <div id="player-health" class="health-fill"></div>
+        <div id="player-text" class="bar-text">Player HP: 100 / 100</div>
+    </div>
+    <div id="shield-status" style="color: #33ccff; font-weight: bold;">Shield: INACTIVE</div>
+
+    <!-- The 3 Abilities -->
+    <div style="margin-top: 20px;">
+        <button onclick="useAbility('attack')">⚔️ Strike</button>
+        <button onclick="useAbility('heal')">❤️ Rejuvenate</button>
+        <button onclick="useAbility('shield')">🛡️ Aegis Barrier</button>
+    </div>
+
+    <div id="log">Battle logged... Defeat the boss through all 10 transformations!</div>
+</div>
+
+<script>
+    // Game State
+    let maxBossHp = 1000;
+    let bossHp = 1000;
+    let playerMaxHp = 100;
+    let playerHp = 100;
+    let isShielded = false;
+    let currentPhase = 1;
+
+    // Boss Phase Configuration (1 to 10)
+    const phases = {
+        1: { name: "Shadow Apprentice", damage: 6 },
+        2: { name: "Flame Adept", damage: 9 },
+        3: { name: "Frost Knight", damage: 12 },
+        4: { name: "Void Stalker", damage: 15 },
+        5: { name: "Storm Summoner", damage: 18 },
+        6: { name: "Corrupted General", damage: 22 },
+        7: { name: "Abyss Archmage", damage: 26 },
+        8: { name: "Dragon Soul Avatar", damage: 31 },
+        9: { name: "Chaos Harbinger", damage: 37 },
+        10: { name: "God-King of Ruin", damage: 45 }
+    };
+
+    function logMessage(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML += `<div>${msg}</div>`;
+        log.scrollTop = log.scrollHeight;
     }
 
-    current_phase = 1
-    shield_active = False
+    function updateUI() {
+        // Update Boss
+        const bossPct = Math.max(0, (bossHp / maxBossHp) * 100);
+        document.getElementById('boss-health').style.width = bossPct + '%';
+        document.getElementById('boss-text').innerText = `Boss HP: ${Math.ceil(bossHp)} / ${maxBossHp}`;
+        document.getElementById('boss-name').innerText = `Phase ${currentPhase}: ${phases[currentPhase].name}`;
 
-    while current_phase <= 10 and player_hp > 0:
-        boss = boss_phases[current_phase]
-        boss_hp = boss["hp"]
+        // Update Player
+        const playerPct = Math.max(0, (playerHp / playerMaxHp) * 100);
+        document.getElementById('player-health').style.width = playerPct + '%';
+        document.getElementById('player-text').innerText = `Player HP: ${playerHp} / ${playerMaxHp}`;
+        document.getElementById('shield-status').innerText = isShielded ? "Shield: ACTIVE (Blocks 50% Damage)" : "Shield: INACTIVE";
+    }
+
+    function useAbility(type) {
+        if (playerHp <= 0 || bossHp <= 0) return;
+
+        if (type === 'attack') {
+            let dmg = Math.floor(Math.random() * 15) + 15; // 15-30 dmg
+            bossHp -= dmg;
+            logMessage(`⚔️ You strike the boss for ${dmg} damage.`);
+            checkPhaseProgression();
+        } 
+        else if (type === 'heal') {
+            let heal = 35;
+            playerHp = Math.min(playerMaxHp, playerHp + heal);
+            logMessage(`❤️ You cast Rejuvenate and heal for ${heal} HP.`);
+        } 
+        else if (type === 'shield') {
+            isShielded = true;
+            logMessage(`🛡️ You raise your Aegis Barrier for the next turn.`);
+        }
+
+        // If boss survives, it counter-attacks
+        if (bossHp > 0) {
+            bossTurn();
+        } else {
+            logMessage("🎉 VICTORY! You have vanquished all 10 phases of the boss!");
+        }
+        updateUI();
+    }
+
+    function checkPhaseProgression() {
+        // Calculate what phase the boss should be based on remaining HP (every 100 HP dropped = 1 phase lower)
+        let calculatedPhase = 11 - Math.ceil(bossHp / 100);
+        if (calculatedPhase > currentPhase && calculatedPhase <= 10) {
+            currentPhase = calculatedPhase;
+            logMessage(`⚠️ WARNING: The boss morphs into Phase ${currentPhase}: ${phases[currentPhase].name}!`);
+        }
+    }
+
+    function bossTurn() {
+        let baseDmg = phases[currentPhase].damage;
+        // Add minor variance to boss attacks (+/- 2)
+        let actualDmg = Math.floor(Math.random() * 5) + (baseDmg - 2);
         
-        print_delay(f"\n--- PHASE {current_phase}: {boss['name']} Appears! ---")
-        print_delay(f"Boss Health: {boss_hp} HP | Danger Ability: {boss['ability']}")
-        
-        # Unlock abilities dynamically based on phase progression
-        if current_phase == 3 and not player_abilities[2]["unlocked"]:
-            player_abilities[2]["unlocked"] = True
-            print_delay("🔥 INSPIRATION! You unlocked 'Fireball'!")
-        if current_phase == 5 and not player_abilities[3]["unlocked"]:
-            player_abilities[3]["unlocked"] = True
-            print_delay("🛡️ FORTITUDE! You unlocked 'Shield Wall'!")
-        if current_phase == 8 and not player_abilities[4]["unlocked"]:
-            player_abilities[4]["unlocked"] = True
-            print_delay("⚡ DIVINE POWER! You unlocked 'God Shatter'!")
+        if (isShielded) {
+            actualDmg = Math.floor(actualDmg * 0.5); // Shield blocks half damage
+            isShielded = false; // Shield breaks after one hit
+            logMessage(`🛡️ Your barrier absorbs half the impact!`);
+        }
 
-        # Turn Loop for the active Phase
-        while boss_hp > 0 and player_hp > 0:
-            print(f"\n[Your HP: {player_hp}/{player_max_hp}] | [{boss['name']} HP: {boss_hp}]")
-            print("Choose your action:")
-            
-            # Display available moves
-            available_choices = []
-            for idx, ab in enumerate(player_abilities):
-                if ab["unlocked"]:
-                    print(f"  {idx + 1}. {ab['name']} - {ab['desc']}")
-                    available_choices.append(str(idx + 1))
-            
-            choice = input("Enter number: ").strip()
-            while choice not in available_choices:
-                choice = input("Invalid action. Choose a valid number: ").strip()
+        playerHp -= actualDmg;
+        logMessage(`💥 The ${phases[currentPhase].name} hits you for ${actualDmg} damage.`);
 
-            # Process Player Move
-            if choice == "1": # Slash
-                dmg = random.randint(15, 25)
-                boss_hp -= dmg
-                print_delay(f"⚔️ You slash the boss for {dmg} damage!")
-            elif choice == "2": # Heal
-                heal = 30
-                player_hp = min(player_max_hp, player_hp + heal)
-                print_delay(f"💚 You cast Heal Light and recover {heal} HP.")
-            elif choice == "3": # Fireball
-                dmg = random.randint(35, 50)
-                boss_hp -= dmg
-                print_delay(f"🔥 You hurl a massive Fireball dealing {dmg} magic damage!")
-            elif choice == "4": # Shield
-                shield_active = True
-                print_delay("🛡️ You brace behind your Shield Wall, preparing for incoming impact!")
-            elif choice == "5": # God Shatter
-                dmg = random.randint(70, 100)
-                boss_hp -= dmg
-                print_delay(f"⚡ GOD SHATTER! Cosmic energy blasts the boss for {dmg} damage!")
+        if (playerHp <= 0) {
+            playerHp = 0;
+            logMessage("💀 GAME OVER! You were crushed by the boss.");
+        }
+    }
 
-            # Check if boss died this turn
-            if boss_hp <= 0:
-                print_delay(f"✨ You defeated Phase {current_phase}: {boss['name']}!")
-                current_phase += 1
-                break
-
-            # Boss Turn Action
-            boss_dmg = random.randint(boss["dmg"][0], boss["dmg"][1])
-            
-            # Use special phrase modifier sometimes
-            if random.random() > 0.4:
-                print_delay(f"💥 The enemy unleashes {boss['ability']}!")
-            else:
-                print_delay(f"⚔️ The enemy strikes quickly!")
-
-            # Resolve shielding math
-            if shield_active:
-                boss_dmg = int(boss_dmg * 0.2)
-                shield_active = False
-                print_delay(f"🛡️ Your shield absorbed most of the blow! You took only {boss_dmg} damage.")
-            else:
-                print_delay(f"💔 You took {boss_dmg} damage.")
-                
-            player_hp -= boss_dmg
-
-    # Game Over Checks
-    if player_hp <= 0:
-        print_delay("\n💀 You were completely overwhelmed by the boss's escalating power. GAME OVER.")
-    else:
-        print_delay("\n👑 AMAZING! You conquered all 10 phases and broke the cycle of chaos! YOU WIN!")
-
-if __name__ == "__main__":
-    play_game()
-
+    // Initial draw
+    updateUI();
+</script>
+</body>
+</html>
