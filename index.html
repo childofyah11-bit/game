@@ -3,214 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Neon Gauntlet</title>
+    <title>Mad Face Fury Arena</title>
     <style>
-        body { background: #03010a; color: #ff00ff; font-family: 'Impact', sans-serif; text-align: center; margin: 0; padding: 15px; overflow: hidden; user-select: none; }
-        .arcade-container { max-width: 440px; margin: 0 auto; background: #0c051c; border: 4px solid #ff00ff; box-shadow: 0 0 20px #ff00ff; padding: 15px; border-radius: 12px; position: relative; }
+        body { background: #0a0010; color: #ff0055; font-family: 'Arial Black', sans-serif; text-align: center; margin: 0; padding: 15px; user-select: none; }
+        .arcade-box { max-width: 420px; margin: 10px auto; background: #140024; border: 4px solid #ff0055; box-shadow: 0 0 20px #ff0055; padding: 15px; border-radius: 8px; }
         
-        /* Tactical Combat Matrix Grid */
-        .combat-arena { position: relative; width: 100%; height: 260px; background: #060210; border: 2px solid #00ffff; box-shadow: inset 0 0 15px rgba(0,255,255,0.3); margin: 10px 0; overflow: hidden; }
+        /* The Big Shifting Mad Face Display Panel */
+        .boss-monitor { background: #000; border: 2px solid #00ffff; padding: 10px; margin-bottom: 15px; position: relative; }
+        #boss-emoji { font-size: 75px; margin: 5px 0; text-shadow: 0 0 15px #ff0000; transition: transform 0.1s; }
+        #phase-name { font-size: 16px; color: #00ffff; font-family: monospace; font-weight: bold; }
         
-        /* Shifting Boss Head Model Frame */
-        #boss-avatar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 70px; text-shadow: 0 0 20px #ff0000; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 5; }
+        /* Master Grid Layout Matrix Slots */
+        .whack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .grid-slot { height: 85px; background: #240a36; border: 2px solid #441166; border-radius: 6px; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 35px; }
+        .active-target { background: #ff0055; border-color: #fff; box-shadow: 0 0 15px #ff0055; animation: targetGlow 0.3s infinite alternate; }
         
-        /* Real-Time Pulse Targets */
-        .strike-node { position: absolute; width: 55px; height: 55px; background: #00ffff; border: 3px solid #fff; border-radius: 50%; font-size: 24px; line-height: 55px; text-align: center; cursor: pointer; box-shadow: 0 0 15px #00ffff; z-index: 10; transform: scale(1); transition: transform 0.1s; }
-        .strike-node:active { transform: scale(0.85); }
+        /* UI Stat Bars Layout */
+        .bar-wrap { background: #222; width: 100%; height: 16px; border: 1px solid #fff; margin-top: 5px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.15s; }
         
-        /* Special Ability Battery Controls */
-        .hud-grid { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; font-size: 11px; font-weight: bold; }
-        .hud-panel { background: #14072b; border: 1px solid #ff00ff; padding: 6px; width: 46%; text-align: left; }
-        .meter { background: #221133; width: 100%; height: 12px; border: 1px solid #fff; margin-top: 4px; overflow: hidden; }
-        .fill { height: 100%; width: 100%; transition: width 0.15s; }
+        .btn-action { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px 30px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 0 10px #00ffff; }
+        .btn-action:disabled { background: #224444; color: #555; border-color: #333; box-shadow: none; cursor: not-allowed; }
         
-        .btn-overdrive { width: 100%; background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px; font-size: 15px; font-weight: bold; font-family: 'Impact'; cursor: pointer; text-shadow: 1px 1px 0 #000; box-shadow: 0 0 10px #ff00ff; margin-top: 5px; }
-        .btn-overdrive:disabled { background: #442244; color: #888; border-color: #666; box-shadow: none; cursor: not-allowed; }
-        .btn-start { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px 35px; font-size: 16px; font-weight: bold; font-family: 'Impact'; cursor: pointer; margin-top: 5px; box-shadow: 0 0 10px #00ffff; }
+        @keyframes targetGlow { 0% { transform: scale(0.96); } 100% { transform: scale(1.04); } }
     </style>
 </head>
 <body>
 
-<div class="arcade-container">
-    <div style="font-size: 22px; color: #00ffff; text-shadow: 2px 2px 0 #ff00ff; letter-spacing: 1px;">⚡ CYBER STRIKE MATRIX ⚡</div>
-    
-    <!-- Status Dashboard -->
-    <div class="hud-grid">
-        <div class="hud-panel" style="border-color:#00ff00;">
-            <div style="color:#00ff00;">PLAYER SIGNAL</div>
-            <div class="meter"><div id="p-fill" class="fill" style="background:#00ff00;"></div></div>
-            <div id="p-lbl" style="margin-top:3px;">HP: 100/100</div>
-        </div>
-        <div class="hud-panel" style="border-color:#ff3333;">
-            <div id="b-name" style="color:#ff3333;">P1: GLARING SENTINEL</div>
-            <div class="meter"><div id="b-fill" class="fill" style="background:#ff3333;"></div></div>
-            <div id="b-lbl" style="margin-top:3px;">CORE: 1500/1500</div>
-        </div>
+<div class="arcade-box">
+    <!-- Evolving Mad Face Monitor Display Header -->
+    <div class="boss-monitor">
+        <div id="phase-name">PHASE 1: ANNOYED GLANCE</div>
+        <div id="boss-emoji">😠</div>
+        
+        <div style="font-family: monospace; font-size: 11px; text-align: left; color: #ff0055; font-weight: bold; margin-top: 5px;">BOSS RAGE LEVEL:</div>
+        <div class="bar-wrap"><div id="b-bar" class="bar-fill" style="background: #ff0055; width: 100%;"></div></div>
     </div>
 
-    <!-- Active Clicking Area Box -->
-    <div class="combat-arena" id="arena">
-        <!-- Giant locked Angry Face Boss Model -->
-        <div id="boss-avatar">😠</div>
+    <!-- Active Player Stamina Trackers HUD Layout -->
+    <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; font-weight: bold; color: #fff; margin-bottom: 10px;">
+        <div>PLAYER LIFE: <span id="p-hp" style="color:#00ff66;">100/100</span></div>
+        <div>SCORE: <span id="score-val" style="color:#ffff00;">0</span></div>
+    </div>
+    <div class="bar-wrap" style="margin-bottom: 15px; height: 8px;"><div id="p-bar" class="bar-fill" style="background: #00ff66; width: 100%;"></div></div>
+
+    <!-- Whack-A-Mole Combat Matrix Slots Grid Layout -->
+    <div class="whack-grid">
+        <div class="grid-slot" id="slot-0" onclick="hitTarget(0)"></div>
+        <div class="grid-slot" id="slot-1" onclick="hitTarget(1)"></div>
+        <div class="grid-slot" id="slot-2" onclick="hitTarget(2)"></div>
+        <div class="grid-slot" id="slot-3" onclick="hitTarget(3)"></div>
+        <div class="grid-slot" id="slot-4" onclick="hitTarget(4)"></div>
+        <div class="grid-slot" id="slot-5" onclick="hitTarget(5)"></div>
+        <div class="grid-slot" id="slot-6" onclick="hitTarget(6)"></div>
+        <div class="grid-slot" id="slot-7" onclick="hitTarget(7)"></div>
+        <div class="grid-slot" id="slot-8" onclick="hitTarget(8)"></div>
     </div>
 
-    <!-- Special Ability Charge Slot -->
-    <button id="od-btn" class="btn-overdrive" onclick="activateSpecialOverdrive()" disabled>OVERDRIVE CORE: 0% [CHARGE AT 100%]</button>
-    <button id="start-btn" class="btn-start" onclick="runNeonEngine()">INITIALIZE MATCH</button>
+    <!-- Special Super Ability Skill Trigger Button -->
+    <button id="super-btn" class="btn-action" onclick="triggerSuperNuke()" style="margin-bottom: 10px;" disabled>SUPER NUKE CORE: 0% [READY AT 100%]</button>
+    <button id="start-btn" class="btn-action" onclick="bootArcadeEngine()" style="background: #00ff66; box-shadow: 0 0 10px #00ff66;">INITIALIZE SYSTEM RUN</button>
 </div>
 
 <script>
-    const arena = document.getElementById('arena');
-    let gameRunning = false, playerHp = 100, currentPhase = 1;
-    let bossHp = 1500, maxBossHp = 1500;
-    let odCharge = 0, overdriveActive = false, overdriveTimer = 0;
-    let loopClock, targetSpawnClock;
+    let gameActive = false, playerHp = 100, score = 0, currentPhase = 1;
+    let bossHp = 1000, maxBossHp = 1000, superCharge = 0;
+    let spawnTimer, gameClock, currentActiveSlot = -1;
 
-    // Phase tracking database keeping the boss angry face locked in but changing fury attributes
-    const phases = {
-        1: { name: "Glaring Sentinel", face: "😠", color: "#33ff33", dmg: 4, speed: 1200 },
-        2: { name: "Irritated Overlord", face: "😠", color: "#00ffff", dmg: 6, speed: 1100 },
-        3: { name: "Aggressive Matrix", face: "😡", color: "#00aaff", dmg: 9, speed: 1000 },
-        4: { name: "Furious Mainframe", face: "😡", color: "#a000ff", dmg: 12, speed: 950 },
-        5: { name: "Raging Core Unit", face: "🤬", color: "#ff00ff", dmg: 15, speed: 900 },
-        6: { name: "Berserk Firewall", face: "🤬", color: "#ff0066", dmg: 18, speed: 850 },
-        7: { name: "Vengeful AI Core", face: "危害", color: "#ff3300", dmg: 22, speed: 800 },
-        8: { name: "Demonic Singularity", face: "👿", color: "#ffff00", dmg: 26, speed: 750 },
-        9: { name: "Doomsday Malfunction", face: "👹", color: "#ffffff", dmg: 30, speed: 700 },
-        10: { name: "Omega Lord of Fury", face: "👺", color: "#ff0000", dmg: 35, speed: 600 }
+    // Fixed Angry Face Progression tracking 10 distinct phases of fury
+    const bossFuries = {
+        1: { text: "Phase 1: Annoyed Glance", face: "😠", color: "#33ff33", delay: 950, damage: 5 },
+        2: { text: "Phase 2: Growing Irritation", face: "😠", color: "#00ffff", delay: 850, damage: 7 },
+        3: { text: "Phase 3: Bitter Scowl", face: "😡", color: "#00aaff", delay: 800, damage: 10 },
+        4: { text: "Phase 4: Flushed Cheeks", face: "😡", color: "#a000ff", delay: 750, damage: 12 },
+        5: { text: "Phase 5: Steam Piped", face: "🤬", color: "#ff00ff", delay: 700, damage: 15 },
+        6: { name: "Phase 6: Red Hot Temper", face: "🤬", color: "#ff0066", delay: 650, damage: 18 },
+        7: { text: "Phase 7: Evil Grin", face: "😈", color: "#ff3300", delay: 600, damage: 22 },
+        8: { text: "Phase 8: Uncontained Rage", face: "😈", color: "#ffff00", delay: 550, damage: 25 },
+        9: { text: "Phase 9: Oni Demon Rising", face: "👹", color: "#ffffff", delay: 500, damage: 30 },
+        10: { text: "Phase 10: Absolute Doomsday Overload", face: "👺", color: "#ff0000", delay: 420, damage: 38 }
     };
 
-    function runNeonEngine() {
-        // Clear runtime state
-        playerHp = 100; bossHp = 1500; currentPhase = 1; odCharge = 0; overdriveActive = false;
+    function bootArcadeEngine() {
+        playerHp = 100; bossHp = 1000; score = 0; currentPhase = 1; superCharge = 0;
         document.getElementById('start-btn').style.display = "none";
         
-        // Wipe old active nodes
-        const activeNodes = document.querySelectorAll('.strike-node');
-        activeNodes.forEach(n => n.remove());
+        // Clear screen alerts
+        const overBox = document.getElementById('game-over-box');
+        if (overBox) overBox.remove();
         
-        const oldScreen = document.getElementById('end-screen');
-        if (oldScreen) oldScreen.remove();
+        gameActive = true;
+        updateViewHUD();
+        syncSuperButton();
         
-        gameRunning = true;
-        syncHUD();
-        
-        // Active Core Processing loops
-        loopClock = setInterval(engineTick, 50);
-        triggerTargetSpawnTimer();
-        spawnCombatNode(); // Spawn initial node immediately
+        // Initialize dynamic rhythm speed loops ticking framework pipelines
+        gameClock = setInterval(coreTickInterval, 100);
+        rotationTimerLoop();
     }
 
-    function triggerTargetSpawnTimer() {
-        clearInterval(targetSpawnClock);
-        if (!gameRunning) return;
-        
-        let spawnRate = overdriveActive ? 300 : phases[currentPhase].speed;
-        targetSpawnClock = setInterval(spawnCombatNode, spawnRate);
-    }
+    function rotationTimerLoop() {
+        clearInterval(spawnTimer);
+        if (!gameActive) return;
 
-    function spawnCombatNode() {
-        if (!gameRunning) return;
-        
-        // Remove old nodes to prevent clutter
-        const existingNode = document.querySelector('.strike-node');
-        if (existingNode) {
-            existingNode.remove();
-            if (!overdriveActive) hitPlayer(phases[currentPhase].dmg);
-        }
-
-        const node = document.createElement('div');
-        node.className = 'strike-node';
-        node.innerText = "⚔️";
-        
-        // Random placement parameters
-        let maxW = arena.clientWidth - 65;
-        let maxH = arena.clientHeight - 130;
-        
-        node.style.left = Math.floor(Math.random() * maxW + 5) + 'px';
-        node.style.top = Math.floor(Math.random() * maxH + 110) + 'px';
-        
-        node.onmousedown = (e) => {
-            e.preventDefault();
-            node.remove();
-            
-            let strikePower = overdriveActive ? 65 : 40;
-            damageBoss(strikePower);
-            
-            if (odCharge < 100 && !overdriveActive) {
-                odCharge = Math.min(100, odCharge + 10);
-                updateODButton();
-            }
-            spawnCombatNode();
-        };
-
-        arena.appendChild(node);
-    }
-
-    function activateSpecialOverdrive() {
-        if (odCharge < 100 || overdriveActive) return;
-        overdriveActive = true;
-        overdriveTimer = 60; 
-        document.getElementById('od-btn').style.background = "#ffff00";
-        document.getElementById('od-btn').style.color = "#000";
-        document.getElementById('boss-avatar').style.transform = "translateX(-50%) scale(0.8)";
-        triggerTargetSpawnTimer();
-    }
-
-    function engineTick() {
-        if (!gameRunning) return;
-
-        if (overdriveActive) {
-            overdriveTimer--;
-            document.getElementById('od-btn').innerText = `OVERDRIVE CORE ACTIVE: ${Math.ceil(overdriveTimer/20)}s`;
-            if (overdriveTimer <= 0) {
-                overdriveActive = false;
-                odCharge = 0;
-                updateODButton();
-                document.getElementById('boss-avatar').style.transform = "translateX(-50%) scale(1)";
-                triggerTargetSpawnTimer();
+        // Damage calculation penalties step if you fail to click a target before it cycles out
+        if (currentActiveSlot !== -1) {
+            let missedSlot = document.getElementById(`slot-${currentActiveSlot}`);
+            if (missedSlot.classList.contains('active-target')) {
+                missedSlot.classList.remove('active-target');
+                missedSlot.innerText = "";
+                decrementPlayerHealth(bossFuries[currentPhase].damage);
             }
         }
+
+        // Random horizontal entry deployment selection index coordinate calculations
+        currentActiveSlot = Math.floor(Math.random() * 9);
+        let nextTarget = document.getElementById(`slot-${currentActiveSlot}`);
+        nextTarget.classList.add('active-target');
+        nextTarget.innerText = "💥";
+
+        spawnTimer = setTimeout(rotationTimerLoop, bossFuries[currentPhase].delay);
     }
 
-    function damageBoss(amt) {
-        bossHp -= amt;
-        if (bossHp <= 0) { bossHp = 0; resolveMatch(true); return; }
+    function hitTarget(index) {
+        if (!gameActive || index !== currentActiveSlot) return;
+        
+        let targetSlot = document.getElementById(`slot-${index}`);
+        if (!targetSlot.classList.contains('active-target')) return;
 
-        let theoreticalPhase = 11 - Math.ceil((bossHp / maxBossHp) * 10);
-        if (theoreticalPhase > currentPhase && theoreticalPhase <= 10) {
-            currentPhase = theoreticalPhase;
-            triggerTargetSpawnTimer(); 
+        // Clear hit node
+        targetSlot.classList.remove('active-target');
+        targetSlot.innerText = "";
+        currentActiveSlot = -1;
+
+        // Apply hit damage metrics to boss health meters
+        score += 25;
+        bossHp -= 45;
+        if (bossHp <= 0) { bossHp = 0; resolveMatchSession(true); return; }
+
+        if (superCharge < 100) {
+            superCharge = Math.min(100, superCharge + 10);
+            syncSuperButton();
         }
-        syncHUD();
+
+        // Compute phase transitions up to rank tier 10 automatically
+        let calculatedPhase = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (calculatedPhase > currentPhase && calculatedPhase <= 10) {
+            currentPhase = calculatedPhase;
+            document.getElementById('boss-emoji').style.transform = "scale(1.3)";
+            setTimeout(() => document.getElementById('boss-emoji').style.transform = "scale(1)", 150);
+        }
+
+        updateViewHUD();
+        rotationTimerLoop(); // Jump straight to next spawn node item cycle immediately
     }
 
-    function hitPlayer(amt) {
+    function triggerSuperNuke() {
+        if (superCharge < 100 || !gameActive) return;
+        superCharge = 0;
+        syncSuperButton();
+
+        // Wipe out immense boss chunks cleanly using your special core skill
+        bossHp -= 160;
+        score += 50;
+        
+        // Visual blast effect mapping triggers
+        document.getElementById('boss-emoji').style.transform = "rotate(360deg) scale(1.4)";
+        setTimeout(() => document.getElementById('boss-emoji').style.transform = "scale(1) rotate(0deg)", 300);
+
+        if (bossHp <= 0) { bossHp = 0; resolveMatchSession(true); return; }
+
+        let calculatedPhase = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (calculatedPhase > currentPhase && calculatedPhase <= 10) {
+            currentPhase = calculatedPhase;
+        }
+
+        updateViewHUD();
+    }
+
+    function coreTickInterval() {
+        if (!gameActive) return;
+        // Small regular passive environment ticks can be wired here if needed
+    }
+
+    function decrementPlayerHealth(amt) {
         playerHp -= amt;
         if (playerHp < 0) playerHp = 0;
-        syncHUD();
-        
-        arena.style.borderColor = "#ff0000";
-        setTimeout(() => arena.style.borderColor = "#00ffff", 100);
+        updateViewHUD();
 
-        if (playerHp <= 0) resolveMatch(false);
+        if (playerHp <= 0) resolveMatchSession(false);
     }
 
-    function updateODButton() {
-        const btn = document.getElementById('od-btn');
-        btn.disabled = odCharge < 100;
-        if (odCharge >= 100) {
-            btn.innerText = "⚡ UNLEASH OVERDRIVE CORE [READY]";
-            btn.style.background = "#ff00ff";
-            btn.style.color = "#fff";
-        } else {
-            btn.innerText = `OVERDRIVE CORE: ${odCharge}% [CHARGE AT 100%]`;
-            btn.style.background = "#442244";
-            btn.style.color = "#888";
-        }
-    }
-
-    function syncHUD() {
-        document.getElementById('p-fill').style.width = Math.max(0, playerHp) + "%";
-        document.getElementById('p-lbl').innerText = `HP: ${playerHp}/100`;
-        
+    function syncSuperButton() {
+        const btn = document.getElementById('super-btn');
+        btn.disabled = superCharge < 100;
+        if (superCharge >= 100) {
+            btn.innerText = "⚡ UNLEASH SUPER NUKE [READY]";
