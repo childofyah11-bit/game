@@ -3,38 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Cavern Escape</title>
+    <title>Arcade Boss Gauntlet</title>
     <style>
-        body { background: #020205; color: #00ffff; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
-        .arcade-frame { max-width: 460px; margin: 5px auto; background: #0c0d1a; padding: 15px; border: 3px solid #00ffff; box-shadow: 0 0 15px #00ffff; border-radius: 6px; }
-        #canvas { background: #000000; display: block; margin: 10px auto; border: 2px solid #333; }
-        .hud { display: flex; justify-content: space-between; background: #121528; padding: 8px; border: 1px solid #00ffff; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
-        .meter-bar { background: #222; width: 100%; height: 10px; border: 1px solid #ff00ff; position: relative; margin-bottom: 5px; }
-        #meter-fill { background: #ff00ff; height: 100%; width: 100%; }
+        body { background: #020208; color: #00ffcc; font-family: monospace; text-align: center; margin: 0; padding: 10px; overflow: hidden; }
+        .cabinet { max-width: 460px; margin: 5px auto; background: #0c0d18; padding: 12px; border: 3px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        #canvas { background: #000000; display: block; margin: 8px auto; border: 2px solid #222; }
+        .hud { display: flex; justify-content: space-between; background: #111424; padding: 8px; border: 1px solid #00ffcc; font-size: 11px; font-weight: bold; }
+        .btn { background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 10px 20px; font-size: 14px; font-weight: bold; font-family: monospace; cursor: pointer; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div class="arcade-frame">
-    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">⚡ CAVERN NAVIGATOR ⚡</div>
+<div class="cabinet">
+    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">⚡ OMEGA BOSS GAUNTLET ⚡</div>
     
+    <!-- Real-time Status Readouts -->
     <div class="hud">
-        <div id="phase-lbl" style="color:#ffff00;">CAVERN PHASE: 1</div>
-        <div>METERS FLYED: <span id="score-lbl" style="color:#00ff66;">0m</span></div>
+        <div id="phase-lbl" style="color:#ff3333; font-size:12px;">PHASE 1: TARGET LOCKED</div>
+        <div>SCORE: <span id="score-lbl" style="color:#00ff66;">0</span></div>
         <div>HULL: <span id="hull-lbl" style="color:#ff3333;">100%</span></div>
     </div>
 
-    <!-- Special Phase Shift Energy Bar Dashboard -->
-    <div class="meter-bar">
-        <div id="meter-fill"></div>
-    </div>
+    <!-- Active Vector Viewport Engine -->
+    <canvas id="canvas" width="420" height="370"></canvas>
 
-    <canvas id="canvas" width="420" height="340"></canvas>
-
-    <button style="background:#ff00ff; color:#fff; font-family:monospace; font-weight:bold; border:2px solid #fff; padding:10px 20px; cursor:pointer;" onclick="bootGame()">LAUNCH SYSTEM</button>
-    <div style="font-size: 10px; color: #557799; margin-top: 8px; font-weight: bold; line-height: 14px;">
-        STEERING: Use [◀ ▲ ▼ ▶] Arrow Keys to fly inside the gap.<br>
-        <span style="color:#ff00ff;">PHASE SHIFT ABILITY: Press [SHIFT] to glide through walls for 2 seconds!</span>
+    <button class="btn" onclick="launchGame()">LAUNCH STARFIGHTER</button>
+    <div style="font-size: 10px; color: #557799; margin-top: 6px; font-weight: bold; line-height: 14px;">
+        STEER: [◀ LEFT / RIGHT ▶] Arrow Keys | PRIMARY WEAPONS: Hold [SPACEBAR]<br>
+        <span style="color:#ff00ff;">DEFENSIVE ABILITY: Press [SHIFT] to raise a Plasma Wall and block bullets!</span>
     </div>
 </div>
 
@@ -42,149 +38,189 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
+    // System States Engine Settings
     let gameActive = false, score = 0, playerHp = 100, currentPhase = 1;
-    let playerX = 200, playerY = 280, playerSize = 16, shipSpeed = 5;
-    let keys = {};
+    let playerX = 195, playerSpeed = 7, keys = {};
+    let playerLasers = [], bossBullets = [], abilityTimer = 0, abilityCooldown = 0;
     
-    let phaseShiftTimer = 0, abilityCharge = 100;
-    let cavernWalls = [];
-    let scrollSpeed = 3, wallTick = 0;
+    // Constant Active Boss Variable Parameters
+    let bossX = 160, bossY = 40, bossWidth = 100, bossHeight = 45, bossDir = 1;
+    let bossHp = 2000, maxBossHp = 2000, shootInterval = 0;
 
-    const phaseStyles = {
-        1: { name: "Asteroid Crust", color: "#663300", gapSize: 150 },
-        2: { name: "Magma Pockets", color: "#ff3300", gapSize: 135 },
-        3: { name: "Crystal Crevice", color: "#00ffff", gapSize: 120 },
-        4: { name: "Frozen Tundra", color: "#0066ff", gapSize: 110 },
-        5: { name: "Radioactive Trench", color: "#33ff33", gapSize: 100 },
-        6: { name: "Gravity Warp Cave", color: "#cc00cc", gapSize: 90 },
-        7: { name: "Plasma Depths", color: "#ff00ff", gapSize: 85 },
-        8: { name: "Void Fractures", color: "#ffffff", gapSize: 80 },
-        9: { name: "Singularity Core", color: "#ffcc00", gapSize: 75 },
-        10: { name: "Omega Desolation", color: "#ff0055", gapSize: 65 }
+    const phaseMap = {
+        1: { name: "Scout Dreadnought", color: "#33ff33", icon: "🛸", speed: 1.5, bulletFreq: 25 },
+        2: { name: "Ion Siege Cannon", color: "#00ffff", icon: "🛰️", speed: 2.0, bulletFreq: 22 },
+        3: { name: "Flame Core Engine", color: "#ff9900", icon: "🔥", speed: 2.4, bulletFreq: 20 },
+        4: { name: "Void Swarm Lord", color: "#cc00cc", icon: "👾", speed: 2.8, bulletFreq: 18 },
+        5: { name: "Plasma Destroyer", color: "#ff0066", icon: "🔮", speed: 3.2, bulletFreq: 16 },
+        6: { name: "Singularity Core", color: "#9900cc", icon: "🌀", speed: 3.6, bulletFreq: 14 },
+        7: { name: "Matrix Sentinel", color: "#0066ff", icon: "👁️", speed: 4.0, bulletFreq: 12 },
+        8: { name: "Hyperion Station", color: "#ffff00", icon: "🏰", speed: 4.4, bulletFreq: 10 },
+        9: { name: "Chaos Harbinger", color: "#ffffff", icon: "🪐", speed: 4.8, bulletFreq: 8 },
+        10: { name: "Omega Primus Engine", color: "#ff00ff", icon: "💀", speed: 5.5, bulletFreq: 6 }
     };
 
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; if(e.code === "ShiftLeft" || e.code === "ShiftRight") triggerPhaseShift(); });
+    window.addEventListener('keydown', (e) => { 
+        keys[e.code] = true; 
+        if (e.code === "Space" && gameActive) playerLasers.push({ x: playerX + 13, y: 330 });
+        if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && abilityCooldown <= 0 && gameActive) triggerAbility();
+    });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-    function bootGame() {
-        score = 0; playerHp = 100; currentPhase = 1; scrollSpeed = 3;
-        playerX = 200; playerY = 280; phaseShiftTimer = 0; abilityCharge = 100;
-        cavernWalls = [];
-        
-        // Generate baseline initial tunnel segments map grid
-        for (let i = 0; i < canvas.height; i += 10) {
-            cavernWalls.push({ y: i, center: 210, size: phaseStyles[1].gapSize });
-        }
+    function launchGame() {
+        score = 0; playerHp = 100; currentPhase = 1; playerX = 195;
+        playerLasers = []; bossBullets = []; abilityTimer = 0; abilityCooldown = 0;
+        bossX = 160; bossHp = 2000; bossDir = 1; shootInterval = 0;
         
         gameActive = true;
-        document.getElementById('score-lbl').innerText = score + "m";
+        document.getElementById('score-lbl').innerText = score;
         document.getElementById('hull-lbl').innerText = playerHp + "%";
-        document.getElementById('phase-lbl').innerText = `PHASE 1: Asteroid Crust`;
+        document.getElementById('phase-lbl').innerText = `P1: ${phaseMap[1].name}`;
         
-        requestAnimationFrame(runLoop);
+        requestAnimationFrame(loop);
     }
 
-    function triggerPhaseShift() {
-        if (abilityCharge < 100 || !gameActive) return;
-        phaseShiftTimer = 120; // 2 seconds at 60fps frame calculations loop
-        abilityCharge = 0;
+    function triggerAbility() {
+        abilityTimer = 90; // Active for 1.5 seconds
+        abilityCooldown = 300; // 5-second downtime wait clock
     }
 
-    function runLoop() {
+    function loop() {
         if (!gameActive) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 4-Way Steering Mechanics
-        if (keys['ArrowLeft'] && playerX > 0) playerX -= shipSpeed;
-        if (keys['ArrowRight'] && playerX < canvas.width - playerSize) playerX += shipSpeed;
-        if (keys['ArrowUp'] && playerY > 0) playerY -= shipSpeed;
-        if (keys['ArrowDown'] && playerY < canvas.height - playerSize) playerY += shipSpeed;
+        // Flight Navigation Physics
+        if (keys['ArrowLeft'] && playerX > 5) playerX -= playerSpeed;
+        if (keys['ArrowRight'] && playerX < canvas.width - 35) playerX += playerSpeed;
 
-        // Manage Recharge Variables
-        if (phaseShiftTimer > 0) {
-            phaseShiftTimer--;
-            document.getElementById('meter-fill').style.width = (phaseShiftTimer / 120) * 100 + "%";
-        } else if (abilityCharge < 100) {
-            abilityCharge += 0.3;
-            document.getElementById('meter-fill').style.width = abilityCharge + "%";
+        // Ability Clock Cooldowns
+        if (abilityTimer > 0) abilityTimer--;
+        if (abilityCooldown > 0) abilityCooldown--;
+
+        // Draw Special Ability Shield Wall
+        if (abilityTimer > 0) {
+            ctx.fillStyle = "rgba(255, 0, 255, 0.4)";
+            ctx.strokeStyle = "#ff00ff";
+            ctx.lineWidth = 2;
+            ctx.fillRect(playerX - 15, 310, 60, 8);
+            ctx.strokeRect(playerX - 15, 310, 60, 8);
         }
 
-        // Shift and advance cave segments mapping arrays data array
-        wallTick += scrollSpeed;
-        if (wallTick >= 10) {
-            wallTick = 0;
-            score += 1;
-            document.getElementById('score-lbl').innerText = score + "m";
-            
-            // Advance Phase metrics dynamically every 50 meters
-            let nextLvl = Math.floor(score / 50) + 1;
-            if (nextLvl > currentPhase && nextLvl <= 10) {
-                currentPhase = nextLvl;
-                scrollSpeed += 0.6;
-                document.getElementById('phase-lbl').innerText = `PHASE ${currentPhase}: ${phaseStyles[currentPhase].name}`;
-            }
-
-            // Calculate movement shifts for new cave sections
-            let lastWall = cavernWalls[0];
-            let currentGapSize = phaseStyles[currentPhase].gapSize;
-            let centerVariance = (Math.random() * 16 - 8) + lastWall.center;
-            
-            // Wall clamps boundary locks
-            if (centerVariance < currentGapSize / 2 + 10) centerVariance = currentGapSize / 2 + 10;
-            if (centerVariance > canvas.width - (currentGapSize / 2 + 10)) centerVariance = canvas.width - (currentGapSize / 2 + 10);
-
-            cavernWalls.pop();
-            cavernWalls.unshift({ y: 0, center: centerVariance, size: currentGapSize });
-        }
-
-        // Draw Cavern Walls System
-        ctx.fillStyle = phaseStyles[currentPhase].color;
-        for (let i = 0; i < cavernWalls.length; i++) {
-            let segment = cavernWalls[i];
-            segment.y += scrollSpeed;
-            if (segment.y > canvas.height) segment.y = 0;
-
-            let leftWidth = segment.center - (segment.size / 2);
-            let rightStart = segment.center + (segment.size / 2);
-
-            ctx.fillRect(0, segment.y, leftWidth, 10);
-            ctx.fillRect(rightStart, segment.y, canvas.width - rightStart, 10);
-
-            // Matrix intersection checkpoint check for collision boxes
-            if (phaseShiftTimer <= 0 && playerY >= segment.y && playerY <= segment.y + 10) {
-                if (playerX <= leftWidth || playerX + playerSize >= rightStart) {
-                    playerHp -= 1.5; // Constant hull friction decay points
-                    document.getElementById('hull-lbl').innerText = Math.ceil(playerHp) + "%";
-                    if (playerHp <= 0) terminateGame();
-                }
-            }
-        }
-
-        // Draw Player Space Scout Sprite Model
-        ctx.font = "20px Arial";
-        if (phaseShiftTimer > 0) {
-            ctx.fillStyle = "rgba(0, 255, 255, 0.4)"; // Opacity indicator for active invincibility
-            ctx.fillText("🛸", playerX - 2, playerY + 14);
-        } else {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText("🚀", playerX - 2, playerY + 14);
-        }
-
-        requestAnimationFrame(runLoop);
-    }
-
-    function terminateGame() {
-        gameActive = false;
-        ctx.fillStyle = "rgba(0,0,0,0.9)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = "bold 20px monospace";
-        ctx.fillStyle = "#ff3333";
-        ctx.fillText("SHIP CRASHED / HULL BREACH", 50, 160);
+        // Draw Hero Ship Model
+        ctx.font = "24px Arial";
         ctx.fillStyle = "#ffffff";
-        ctx.font = "14px monospace";
-        ctx.fillText(`Distance: ${score}m | Final Zone Phase: ${currentPhase}`, 55, 200);
+        ctx.fillText("🚀", playerX, 350);
+
+        // Horizontal Boss Cruise Trajectory Logic
+        bossX += bossDir * phaseMap[currentPhase].speed;
+        if (bossX < 5 || bossX > canvas.width - bossWidth - 5) bossDir *= -1;
+
+        // Draw Capital Boss Hull Core Shape
+        ctx.fillStyle = "rgba(10, 15, 35, 0.8)";
+        ctx.strokeStyle = phaseMap[currentPhase].color;
+        ctx.lineWidth = 3;
+        ctx.fillRect(bossX, bossY, bossWidth, bossHeight);
+        ctx.strokeRect(bossX, bossY, bossWidth, bossHeight);
+
+        // Render Current Phase Emoji Icon inside boss box
+        ctx.font = "26px Arial";
+        ctx.fillText(phaseMap[currentPhase].icon, bossX + 36, bossY + 32);
+
+        // Draw Boss Canvas Health Bar directly overhead
+        ctx.fillStyle = "#222";
+        ctx.fillRect(bossX, bossY - 14, bossWidth, 6);
+        ctx.fillStyle = phaseMap[currentPhase].color;
+        ctx.fillRect(bossX, bossY - 14, (bossHp / maxBossHp) * bossWidth, 6);
+
+        // Automated Boss Fire Delivery System
+        shootInterval++;
+        if (shootInterval > phaseMap[currentPhase].bulletFreq) {
+            bossBullets.push({ x: bossX + 20, y: bossY + bossHeight, speed: 4 });
+            bossBullets.push({ x: bossX + 80, y: bossY + bossHeight, speed: 4 });
+            shootInterval = 0;
+        }
+
+        // Handle Player Lasers Moving Upward
+        ctx.fillStyle = "#00ffff";
+        for (let l = playerLasers.length - 1; l >= 0; l--) {
+            let laser = playerLasers[l];
+            laser.y -= 9;
+            ctx.fillRect(laser.x, laser.y, 4, 10);
+
+            // Bounds cleanups
+            if (laser.y < 0) { playerLasers.splice(l, 1); continue; }
+
+            // Collision check: Lasers hitting Boss box limits
+            if (laser.x >= bossX && laser.x <= bossX + bossWidth && laser.y >= bossY && laser.y <= bossY + bossHeight) {
+                playerLasers.splice(l, 1);
+                damageBossCore(20);
+            }
+        }
+
+        // Handle Boss Bullets Moving Downward
+        ctx.fillStyle = "#ff3333";
+        for (let b = bossBullets.length - 1; b >= 0; b--) {
+            let bullet = bossBullets[b];
+            bullet.y += bullet.speed;
+            ctx.fillRect(bullet.x, bullet.y, 6, 6);
+
+            if (bullet.y > canvas.height) { bossBullets.splice(b, 1); continue; }
+
+            // Check if special protective barrier wall deflects bullet
+            if (abilityTimer > 0 && bullet.x >= playerX - 15 && bullet.x <= playerX + 45 && bullet.y >= 310 && bullet.y <= 320) {
+                bossBullets.splice(b, 1);
+                score += 5; // Extra bonus points scored for blocking attacks
+                document.getElementById('score-lbl').innerText = score;
+                continue;
+            }
+
+            // Bullet hits ship hull plating box boundaries
+            if (bullet.x >= playerX && bullet.x <= playerX + 24 && bullet.y >= 330 && bullet.y <= 355) {
+                bossBullets.splice(b, 1);
+                inflictHeroDamage(10);
+            }
+        }
+
+        requestAnimationFrame(loop);
     }
-</script>
-</body>
-</html>
+
+    function damageBossCore(amt) {
+        bossHp -= amt;
+        score += 10;
+        document.getElementById('score-lbl').innerText = score;
+
+        if (bossHp <= 0) {
+            bossHp = 0;
+            endMatchSession(true);
+            return;
+        }
+
+        // Recalculate if boss needs to shift phases (10 steps)
+        let evaluatedLvl = 11 - Math.ceil((bossHp / maxBossHp) * 10);
+        if (evaluatedLvl > currentPhase && evaluatedLvl <= 10) {
+            currentPhase = evaluatedLvl;
+            document.getElementById('phase-lbl').innerText = `P${currentPhase}: ${phaseMap[currentPhase].name}`;
+            document.getElementById('phase-lbl').style.color = phaseMap[currentPhase].color;
+        }
+    }
+
+    function inflictHeroDamage(amt) {
+        playerHp -= amt;
+        if (playerHp < 0) playerHp = 0;
+        document.getElementById('hull-lbl').innerText = playerHp + "%";
+        if (playerHp <= 0) endMatchSession(false);
+    }
+
+    function endMatchSession(didWin) {
+        gameActive = false;
+        ctx.fillStyle = "rgba(2, 2, 8, 0.9)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.font = "bold 20px monospace";
+        if (didWin) {
+            ctx.fillStyle = "#00ffcc";
+            ctx.fillText("VICTORY! ALL 10 PHASES DESTROYED", 30, 175);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "14px monospace";
+            ctx.fillText(`Final Arcade Score: ${score}`, 110, 215);
