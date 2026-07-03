@@ -168,7 +168,6 @@
     <p>Build a production-grade live loop track right from your GitHub dashboard!</p>
 
     <div class="sequencer-container">
-        <!-- Top Toolbar Controls Panel -->
         <div class="controls">
             <button id="playBtn">START BEAT</button>
             <button id="clearBtn">CLEAR ALL</button>
@@ -179,114 +178,108 @@
             </div>
         </div>
 
-        <!-- Matrix Layout Panel Container -->
         <div class="grid-wrapper">
             <div class="grid" id="sequencerGrid"></div>
         </div>
     </div>
 
     <script>
-        const tracks = ['Heavy Kick', 'Deep Snare', 'Open Hat', 'Closed Hat', 'Synth Low', 'Synth Mid', 'Synth High', 'Laser SFX'];
-        const steps = 16; 
-        
-        let isPlaying = false;
-        let currentStep = 0;
-        let intervalId = null;
-        let audioCtx = null;
-        let bpm = 120;
-
-        const grid = document.getElementById('sequencerGrid');
-        const playBtn = document.getElementById('playBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const bpmSlider = document.getElementById('bpmSlider');
-        const bpmVal = document.getElementById('bpmVal');
-
-        const gridState = tracks.map(() => Array(steps).fill(false));
-        const trackVolumes = Array(tracks.length).fill(0.5); 
-
-        // Generate matrix channels securely
-        tracks.forEach((trackName, rowIndex) => {
-            const controlBox = document.createElement('div');
-            controlBox.className = 'row-control-box';
-
-            const label = document.createElement('div');
-            label.className = 'row-label';
-            label.textContent = trackName;
-            controlBox.appendChild(label);
-
-            const volSlider = document.createElement('input');
-            volSlider.type = 'range';
-            volSlider.className = 'vol-slider';
-            volSlider.min = '0';
-            volSlider.max = '1';
-            volSlider.step = '0.1';
-            volSlider.value = '0.5';
-            volSlider.addEventListener('input', (e) => {
-                trackVolumes[rowIndex] = parseFloat(e.target.value);
-            });
-            controlBox.appendChild(volSlider);
+        // Wrap everything inside a safe DOM listener block
+        document.addEventListener("DOMContentLoaded", () => {
+            const tracks = ['Heavy Kick', 'Deep Snare', 'Open Hat', 'Closed Hat', 'Synth Low', 'Synth Mid', 'Synth High', 'Laser SFX'];
+            const steps = 16; 
             
-            grid.appendChild(controlBox);
+            let isPlaying = false;
+            let currentStep = 0;
+            let intervalId = null;
+            let audioCtx = null;
+            let bpm = 120;
 
-            for (let colIndex = 0; colIndex < steps; colIndex++) {
-                const pad = document.createElement('div');
-                pad.className = 'pad';
-                pad.dataset.row = rowIndex;
-                pad.dataset.col = colIndex;
+            const grid = document.getElementById('sequencerGrid');
+            const playBtn = document.getElementById('playBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const bpmSlider = document.getElementById('bpmSlider');
+            const bpmVal = document.getElementById('bpmVal');
 
-                pad.addEventListener('click', () => {
-                    gridState[rowIndex][colIndex] = !gridState[rowIndex][colIndex];
-                    pad.classList.toggle('active');
+            const gridState = tracks.map(() => Array(steps).fill(false));
+            const trackVolumes = Array(tracks.length).fill(0.5); 
+
+            tracks.forEach((trackName, rowIndex) => {
+                const controlBox = document.createElement('div');
+                controlBox.className = 'row-control-box';
+
+                const label = document.createElement('div');
+                label.className = 'row-label';
+                label.textContent = trackName;
+                controlBox.appendChild(label);
+
+                const volSlider = document.createElement('input');
+                volSlider.type = 'range';
+                volSlider.className = 'vol-slider';
+                volSlider.min = '0';
+                volSlider.max = '1';
+                volSlider.step = '0.1';
+                volSlider.value = '0.5';
+                volSlider.addEventListener('input', (e) => {
+                    trackVolumes[rowIndex] = parseFloat(e.target.value);
                 });
+                controlBox.appendChild(volSlider);
+                
+                grid.appendChild(controlBox);
 
-                grid.appendChild(pad);
-            }
-        });
+                for (let colIndex = 0; colIndex < steps; colIndex++) {
+                    const pad = document.createElement('div');
+                    pad.className = 'pad';
+                    pad.dataset.row = rowIndex;
+                    pad.dataset.col = colIndex;
 
-        function playSound(trackIndex) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+                    pad.addEventListener('click', () => {
+                        gridState[rowIndex][colIndex] = !gridState[rowIndex][colIndex];
+                        pad.classList.toggle('active');
+                    });
 
-            const now = audioCtx.currentTime;
-            const trackVol = trackVolumes[trackIndex]; 
+                    grid.appendChild(pad);
+                }
+            });
 
-            switch(trackIndex) {
-                case 0:
-                    osc.frequency.setValueAtTime(150, now);
-                    osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.4);
-                    gain.gain.setValueAtTime(1.2 * trackVol, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                    osc.start(now); osc.stop(now + 0.4);
-                    break;
-                case 1:
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(220, now);
-                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
-                    gain.gain.setValueAtTime(0.8 * trackVol, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                    osc.start(now); osc.stop(now + 0.25);
-                    break;
-                case 2:
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(9000, now);
-                    gain.gain.setValueAtTime(0.25 * trackVol, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                    osc.start(now); osc.stop(now + 0.3);
-                    break;
-                case 3:
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(11000, now);
-                    gain.gain.setValueAtTime(0.3 * trackVol, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
-                    osc.start(now); osc.stop(now + 0.06);
-                    break;
-                case 4:
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(110, now); 
-                    gain.gain.setValueAtTime(0.3 * trackVol, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-                    osc.start(now); osc.stop(now + 0.35);
+            function playSound(trackIndex) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                const trackVol = trackVolumes[trackIndex]; 
+
+                switch(trackIndex) {
+                    case 0:
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.4);
+                        gain.gain.setValueAtTime(1.2 * trackVol, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                        osc.start(now); osc.stop(now + 0.4);
+                        break;
+                    case 1:
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(220, now);
+                        osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+                        gain.gain.setValueAtTime(0.8 * trackVol, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                        osc.start(now); osc.stop(now + 0.25);
+                        break;
+                    case 2:
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(9000, now);
+                        gain.gain.setValueAtTime(0.25 * trackVol, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                        osc.start(now); osc.stop(now + 0.3);
+                        break;
+                    case 3:
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(11000, now);
+                        gain.gain.setValueAtTime(0.3 * trackVol, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                        osc.start(now); osc.stop(now + 0.06);
+                        break;
