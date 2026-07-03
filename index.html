@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Cyberband Sequencer</title>
+    <title>GitHub Cyberband Neo Pro</title>
     <style>
         :root {
             --bg-color: #0d1117;
@@ -30,13 +30,14 @@
         h1 {
             color: #ffffff;
             margin-bottom: 5px;
-            font-size: 1.8rem;
+            font-size: 2.2rem;
+            text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
         p {
             color: #8b949e;
             margin-bottom: 25px;
-            font-size: 0.95rem;
+            font-size: 1rem;
         }
 
         .sequencer-container {
@@ -44,16 +45,21 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            max-width: 600px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+            max-width: 900px;
             width: 100%;
         }
 
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             margin-bottom: 25px;
             align-items: center;
+            flex-wrap: wrap;
+            background-color: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
         }
 
         button {
@@ -76,20 +82,34 @@
             background-color: #238636;
             color: #ffffff;
             border-color: #2ea44f;
-            box-shadow: 0 0 10px rgba(46, 164, 79, 0.4);
+            box-shadow: 0 0 12px rgba(46, 164, 79, 0.5);
+        }
+
+        .bpm-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #8b949e;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+            accent-color: var(--accent-active);
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 80px repeat(8, 1fr);
-            gap: 8px;
+            grid-template-columns: 100px repeat(16, 1fr);
+            gap: 6px;
+            overflow-x: auto;
         }
 
         .row-label {
             display: flex;
             align-items: center;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.8rem;
+            font-weight: 700;
             color: #8b949e;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -99,9 +119,10 @@
             aspect-ratio: 1;
             background-color: #21262d;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.1s, box-shadow 0.1s;
+            min-width: 25px;
         }
 
         .pad:hover {
@@ -111,24 +132,36 @@
         .pad.active {
             background-color: var(--accent-active);
             border-color: #79c0ff;
-            box-shadow: 0 0 12px var(--accent-glow);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
+
+        /* Color variations for specific instrument groupings */
+        .grid div[data-row="0"].active, .grid div[data-row="1"].active { background-color: #ff7b72; border-color: #ffa198; box-shadow: 0 0 10px rgba(255,123,114,0.4); }
+        .grid div[data-row="2"].active, .grid div[data-row="3"].active { background-color: #79c0ff; border-color: #c9d1d9; box-shadow: 0 0 10px rgba(121,192,255,0.4); }
+        .grid div[data-row="4"].active, .grid div[data-row="5"].active { background-color: #d2a8ff; border-color: #e8d5ff; box-shadow: 0 0 10px rgba(210,168,255,0.4); }
+        .grid div[data-row="6"].active, .grid div[data-row="7"].active { background-color: #3fb950; border-color: #56d364; box-shadow: 0 0 10px rgba(63,185,80,0.4); }
 
         .pad.current-step {
             outline: 2px solid #ffffff;
             outline-offset: 1px;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
 
-    <h1>🤖 Cyberband Neo</h1>
-    <p>Click pads to sketch a custom synth beat loop, then hit play!</p>
+    <h1>🚀 Cyberband Neo Pro</h1>
+    <p>Build a production-grade live loop track right from your GitHub dashboard!</p>
 
     <div class="sequencer-container">
         <div class="controls">
             <button id="playBtn">START BEAT</button>
             <button id="clearBtn">CLEAR ALL</button>
+            <div class="bpm-container">
+                <span>SPEED:</span>
+                <input type="range" id="bpmSlider" min="60" max="200" value="120">
+                <span id="bpmVal">120 BPM</span>
+            </div>
         </div>
 
         <div class="grid" id="sequencerGrid">
@@ -137,24 +170,26 @@
     </div>
 
     <script>
-        const tracks = ['Kick', 'Snare', 'Hi-Hat', 'Synth'];
-        const steps = 8;
+        // Expanded to 8 dynamic instrument sound options
+        const tracks = ['Heavy Kick', 'Deep Snare', 'Open Hat', 'Closed Hat', 'Synth Low', 'Synth Mid', 'Synth High', 'Laser SFX'];
+        // Expanded grid width from 8 steps up to 16 steps
+        const steps = 16; 
+        
         let isPlaying = false;
         let currentStep = 0;
         let intervalId = null;
-        
-        // Audio Context setup initialization
         let audioCtx = null;
+        let bpm = 120;
 
-        // Visual elements setup
         const grid = document.getElementById('sequencerGrid');
         const playBtn = document.getElementById('playBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmVal = document.getElementById('bpmVal');
 
-        // Build internal matrix tracking state
         const gridState = tracks.map(() => Array(steps).fill(false));
 
-        // UI Grid initialization loop
+        // Generate 16-step massive layout grid interface
         tracks.forEach((trackName, rowIndex) => {
             const label = document.createElement('div');
             label.className = 'row-label';
@@ -168,8 +203,7 @@
                 pad.dataset.col = colIndex;
 
                 pad.addEventListener('click', () => {
-                    const active = gridState[rowIndex][colIndex];
-                    gridState[rowIndex][colIndex] = !active;
+                    gridState[rowIndex][colIndex] = !gridState[rowIndex][colIndex];
                     pad.classList.toggle('active');
                 });
 
@@ -177,7 +211,7 @@
             }
         });
 
-        // Synthetic Instruments Synthesis Logic via Web Audio API
+        // Synthetic Sound Engine - Generating 8 customized instrument layers
         function playSound(trackIndex) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             
@@ -188,89 +222,51 @@
 
             const now = audioCtx.currentTime;
 
-            if (trackIndex === 0) { // Kick Drum configuration
-                osc.frequency.setValueAtTime(120, now);
-                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.3);
-                gain.gain.setValueAtTime(1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
-            } 
-            else if (trackIndex === 1) { // Snare Drum configuration
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(180, now);
-                gain.gain.setValueAtTime(0.7, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
-            } 
-            else if (trackIndex === 2) { // Hi-Hat configuration
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(10000, now);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-                osc.start(now);
-                osc.stop(now + 0.05);
-            } 
-            else if (trackIndex === 3) { // Synth Lead Melody configuration
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, now); // A4 pitch node
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now);
-                osc.stop(now + 0.4);
-            }
-        }
-
-        // Loop Sequence Logic Step Engine
-        function tickEngine() {
-            const allPads = document.querySelectorAll('.pad');
-            allPads.forEach(p => p.classList.remove('current-step'));
-
-            const stepPads = document.querySelectorAll(`[data-col="${currentStep}"]`);
-            stepPads.forEach(pad => {
-                pad.classList.add('current-step');
-                const row = parseInt(pad.dataset.row);
-                if (gridState[row][currentStep]) {
-                    playSound(row);
-                }
-            });
-
-            currentStep = (currentStep + 1) % steps;
-        }
-
-        // Play/Pause Click Handler Event Hook
-        playBtn.addEventListener('click', () => {
-            if (isPlaying) {
-                clearInterval(intervalId);
-                playBtn.textContent = "START BEAT";
-                playBtn.classList.remove('playing');
-                const allPads = document.querySelectorAll('.pad');
-                allPads.forEach(p => p.classList.remove('current-step'));
-            } else {
-                currentStep = 0;
-                tickEngine(); 
-                intervalId = setInterval(tickEngine, 300); // 300ms playback pace pacing step engine
-                playBtn.textContent = "STOP BEAT";
-                playBtn.classList.add('playing');
-            }
-            isPlaying = !isPlaying;
-        });
-
-        // Board Cleardown Utility Reset Event Hook
-        clearBtn.addEventListener('click', () => {
-            const allPads = document.querySelectorAll('.pad');
-            allPads.forEach(p => {
-                p.classList.remove('active');
-                p.classList.remove('current-step');
-            });
-            for (let r = 0; r < tracks.length; r++) {
-                gridState[r].fill(false);
-            }
-            if (isPlaying) {
-                playBtn.click();
-            }
-        });
-    </script>
-</body>
-</html>
+            switch(trackIndex) {
+                case 0: // Heavy Kick
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    gain.gain.setValueAtTime(1.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now); osc.stop(now + 0.4);
+                    break;
+                case 1: // Deep Snare
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+                    gain.gain.setValueAtTime(0.8, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                    break;
+                case 2: // Open Hat
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(9000, now);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                    break;
+                case 3: // Closed Hat
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(11000, now);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                    osc.start(now); osc.stop(now + 0.06);
+                    break;
+                case 4: // Synth Low (Bassline note)
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(110, now); // A2 pitch frequency node
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now); osc.stop(now + 0.35);
+                    break;
+                case 5: // Synth Mid
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(329.63, now); // E4 pitch frequency node
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now); osc.stop(now + 0.35);
+                    break;
+                case 6: // Synth High (Melodic top layer)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5 pitch frequency node
+                    gain.gain.setValueAtTime(0.35, now);
