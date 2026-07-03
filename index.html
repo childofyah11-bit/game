@@ -56,7 +56,6 @@
             gap: 12px;
         }
 
-        /* Fixed Canvas Element - Completely immune to DOM assembly bugs */
         canvas {
             background-color: #05070a;
             border: 1px solid #21262d;
@@ -105,7 +104,6 @@
     <p>Move mouse / swipe finger left and right to dodge high-tech digital grid anomalies!</p>
 
     <div id="gameBox">
-        <!-- Rigid visual frame wrapper -->
         <canvas id="gameCanvas" width="400" height="500"></canvas>
         
         <div class="btn-panel">
@@ -115,26 +113,22 @@
     </div>
 
     <script>
-        // High-Tech Canvas Arcade Framework Engine
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const startBtn = document.getElementById('startBtn');
         const musicBtn = document.getElementById('musicBtn');
 
-        // Game Configuration Variables
         let gameActive = false;
         let score = 0;
         let speedMultiplier = 1;
         let anomalies = [];
         let particles = [];
         
-        // Audio Synth Variables
         let audioCtx = null;
         let musicInterval = null;
         let audioEnabled = false;
         let synthStep = 0;
 
-        // Player Core Identity Ship Object Data Structure
         const player = {
             x: 200,
             y: 430,
@@ -144,17 +138,15 @@
             speed: 0.25
         };
 
-        // Cyberpunk Synth Melody Array Data Nodes (frequencies)
-        const bassline = [110, 110, 130, 130, 98, 98, 146, 130];
-        const leadArpeggio = [440, 523, 659, 784, 587, 698, 880, 987];
+        // FIXED: Frequencies are now assigned correctly to prevent browser crashes
+        const bassline = [110.00, 110.00, 130.81, 130.81, 146.83, 146.83, 164.81, 164.81];
+        const leadArpeggio = [440.00, 523.25, 587.33, 659.25, 783.99, 880.00];
 
-        // Track Pointer Movement Across the Digital Field
         window.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             player.targetX = e.clientX - rect.left;
         });
 
-        // Add Touch Control Compatibility for Mobile Screens
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
@@ -163,7 +155,6 @@
             }
         }, { passive: false });
 
-        // Synthesizer Audio Matrix Trigger Loop
         function startSynthAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (musicInterval) clearInterval(musicInterval);
@@ -173,7 +164,6 @@
 
                 const now = audioCtx.currentTime;
                 
-                // 1. Core Heavy Bass Channel Layer
                 const bassOsc = audioCtx.createOscillator();
                 const bassGain = audioCtx.createGain();
                 bassOsc.type = 'sawtooth';
@@ -184,7 +174,6 @@
                 bassGain.connect(audioCtx.destination);
                 bassOsc.start(now); bassOsc.stop(now + 0.25);
 
-                // 2. High-Tech Lead Melodic Node Layer (Plays on alternating beats)
                 if (synthStep % 2 === 0) {
                     const leadOsc = audioCtx.createOscillator();
                     const leadGain = audioCtx.createGain();
@@ -198,10 +187,9 @@
                 }
 
                 synthStep++;
-            }, 200); // Stable 200ms step pacing clock sequencer
+            }, 200);
         }
 
-        // Trigger Explosion Effects When Crashing
         function crashSFX() {
             if (!audioEnabled || !audioCtx) return;
             const now = audioCtx.currentTime;
@@ -217,7 +205,6 @@
             osc.start(now); osc.stop(now + 0.5);
         }
 
-        // Generate Glowing Vector Sparks Particles
         function spawnExplosion(x, y, color) {
             for(let i=0; i<15; i++) {
                 particles.push({
@@ -231,7 +218,6 @@
             }
         }
 
-        // Primary System Engine Core Setup loop Initialization
         function initSimulation() {
             anomalies = [];
             particles = [];
@@ -244,13 +230,10 @@
             if (audioEnabled) startSynthAudio();
         }
 
-        // Central Animation Loop Engine Frame Hook
         function updateEngineLoop() {
-            // Clear view frame layout safely
             ctx.fillStyle = '#05070a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Background High-Tech Vector Grid Lines
             ctx.strokeStyle = '#111622';
             ctx.lineWidth = 1;
             for(let i=0; i<canvas.width; i+=40) {
@@ -261,19 +244,43 @@
             }
 
             if (gameActive) {
-                // Smooth interpolation for fluid player motion mechanics
                 player.x += (player.targetX - player.x) * player.speed;
                 
-                // Screen boundaries restriction locking clamp
                 if (player.x < player.width/2) player.x = player.width/2;
                 if (player.x > canvas.width - player.width/2) player.x = canvas.width - player.width/2;
 
-                // Slowly ramp up difficulty speed multiplier factor
                 speedMultiplier += 0.0004;
 
-                // Draw Core Player Identity Pointer Ship Model
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#00f0ff';
                 ctx.fillStyle = '#00f0ff';
                 ctx.beginPath();
                 ctx.moveTo(player.x, player.y - player.height);
+                ctx.lineTo(player.x - player.width/2, player.y);
+                ctx.lineTo(player.x + player.width/2, player.y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                if (Math.random() < 0.04) {
+                    anomalies.push({
+                        x: Math.random() * (canvas.width - 20) + 10,
+                        y: -20,
+                        size: Math.random() * 15 + 15,
+                        speed: (Math.random() * 3 + 2) * speedMultiplier
+                    });
+                }
+
+                for (let i = anomalies.length - 1; i >= 0; i--) {
+                    let a = anomalies[i];
+                    a.y += a.speed;
+
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ff007f';
+                    ctx.fillStyle = '#ff007f';
+                    ctx.fillRect(a.x - a.size/2, a.y - a.size/2, a.size, a.size);
+                    ctx.shadowBlur = 0;
+
+                    if (Math.abs(player.x - a.x) < (player.width/2 + a.size/2) &&
+                        Math.abs((player.y - player.height/2) - a.y) < (player.height/2 + a.size/2)) {
+                        
