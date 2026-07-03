@@ -24,40 +24,43 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
+            box-sizing: border-box;
         }
 
         h1 {
             color: #ffffff;
-            margin-bottom: 5px;
-            font-size: 2.2rem;
+            margin: 0 0 5px 0;
+            font-size: 1.8rem;
             text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
         p {
             color: #8b949e;
-            margin-bottom: 25px;
-            font-size: 1rem;
+            margin: 0 0 20px 0;
+            font-size: 0.9rem;
+            text-align: center;
         }
 
         .sequencer-container {
             background-color: var(--container-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 24px;
+            padding: 15px;
             box-shadow: 0 12px 32px rgba(0,0,0,0.6);
-            max-width: 900px;
             width: 100%;
+            max-width: 95vw; /* Keeps the panel from jumping off-screen */
+            box-sizing: border-box;
         }
 
         .controls {
             display: flex;
-            gap: 20px;
-            margin-bottom: 25px;
+            gap: 15px;
+            margin-bottom: 20px;
             align-items: center;
             flex-wrap: wrap;
             background-color: #0d1117;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
@@ -66,11 +69,12 @@
             background-color: #21262d;
             color: #c9d1d9;
             border: 1px solid var(--border-color);
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
+            font-size: 0.85rem;
         }
 
         button:hover {
@@ -91,6 +95,7 @@
             gap: 10px;
             font-weight: 600;
             color: #8b949e;
+            font-size: 0.85rem;
         }
 
         input[type="range"] {
@@ -98,21 +103,44 @@
             accent-color: var(--accent-active);
         }
 
+        /* Fixed Grid Wrapper: Adds a nice scrollbar so it never vanishes */
+        .grid-wrapper {
+            width: 100%;
+            overflow-x: auto; 
+            padding-bottom: 10px;
+        }
+
         .grid {
             display: grid;
-            grid-template-columns: 100px repeat(16, 1fr);
+            grid-template-columns: 180px repeat(16, 1fr); /* Fits label + controls nicely */
             gap: 6px;
-            overflow-x: auto;
+            min-width: 750px; /* Forces layout to remain intact */
+        }
+
+        .row-control-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            background: #0d1117;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
         }
 
         .row-label {
-            display: flex;
-            align-items: center;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             color: #8b949e;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .vol-slider {
+            width: 100%;
+            height: 4px;
         }
 
         .pad {
@@ -122,24 +150,17 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.1s, box-shadow 0.1s;
-            min-width: 25px;
         }
 
         .pad:hover {
             background-color: #30363d;
         }
 
-        .pad.active {
-            background-color: var(--accent-active);
-            border-color: #79c0ff;
-            box-shadow: 0 0 10px var(--accent-glow);
-        }
-
-        /* Color variations for specific instrument groupings */
-        .grid div[data-row="0"].active, .grid div[data-row="1"].active { background-color: #ff7b72; border-color: #ffa198; box-shadow: 0 0 10px rgba(255,123,114,0.4); }
-        .grid div[data-row="2"].active, .grid div[data-row="3"].active { background-color: #79c0ff; border-color: #c9d1d9; box-shadow: 0 0 10px rgba(121,192,255,0.4); }
-        .grid div[data-row="4"].active, .grid div[data-row="5"].active { background-color: #d2a8ff; border-color: #e8d5ff; box-shadow: 0 0 10px rgba(210,168,255,0.4); }
-        .grid div[data-row="6"].active, .grid div[data-row="7"].active { background-color: #3fb950; border-color: #56d364; box-shadow: 0 0 10px rgba(63,185,80,0.4); }
+        /* Active color bands per section */
+        .grid div[data-row="0"].active, .grid div[data-row="1"].active { background-color: #ff7b72; border-color: #ffa198; }
+        .grid div[data-row="2"].active, .grid div[data-row="3"].active { background-color: #79c0ff; border-color: #c9d1d9; }
+        .grid div[data-row="4"].active, .grid div[data-row="5"].active { background-color: #d2a8ff; border-color: #e8d5ff; }
+        .grid div[data-row="6"].active, .grid div[data-row="7"].active { background-color: #3fb950; border-color: #56d364; }
 
         .pad.current-step {
             outline: 2px solid #ffffff;
@@ -164,15 +185,15 @@
             </div>
         </div>
 
-        <div class="grid" id="sequencerGrid">
-            <!-- Labels and pads will be generated via JavaScript -->
+        <div class="grid-wrapper">
+            <div class="grid" id="sequencerGrid">
+                <!-- Labels, Volume controls, and pads generate here securely -->
+            </div>
         </div>
     </div>
 
     <script>
-        // Expanded to 8 dynamic instrument sound options
         const tracks = ['Heavy Kick', 'Deep Snare', 'Open Hat', 'Closed Hat', 'Synth Low', 'Synth Mid', 'Synth High', 'Laser SFX'];
-        // Expanded grid width from 8 steps up to 16 steps
         const steps = 16; 
         
         let isPlaying = false;
@@ -188,13 +209,33 @@
         const bpmVal = document.getElementById('bpmVal');
 
         const gridState = tracks.map(() => Array(steps).fill(false));
+        // Array to track custom volume multiplier per track (0.0 to 1.0)
+        const trackVolumes = Array(tracks.length).fill(0.5); 
 
-        // Generate 16-step massive layout grid interface
+        // Generate grid elements safely
         tracks.forEach((trackName, rowIndex) => {
+            // Container for label + volume slider
+            const controlBox = document.createElement('div');
+            controlBox.className = 'row-control-box';
+
             const label = document.createElement('div');
             label.className = 'row-label';
             label.textContent = trackName;
-            grid.appendChild(label);
+            controlBox.appendChild(label);
+
+            const volSlider = document.createElement('input');
+            volSlider.type = 'range';
+            volSlider.className = 'vol-slider';
+            volSlider.min = '0';
+            volSlider.max = '1';
+            volSlider.step = '0.1';
+            volSlider.value = '0.5';
+            volSlider.addEventListener('input', (e) => {
+                trackVolumes[rowIndex] = parseFloat(e.target.value);
+            });
+            controlBox.appendChild(volSlider);
+            
+            grid.appendChild(controlBox);
 
             for (let colIndex = 0; colIndex < steps; colIndex++) {
                 const pad = document.createElement('div');
@@ -211,7 +252,6 @@
             }
         });
 
-        // Synthetic Sound Engine - Generating 8 customized instrument layers
         function playSound(trackIndex) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             
@@ -221,12 +261,14 @@
             gain.connect(audioCtx.destination);
 
             const now = audioCtx.currentTime;
+            // Mix master volume math configuration
+            const trackVol = trackVolumes[trackIndex]; 
 
             switch(trackIndex) {
                 case 0: // Heavy Kick
                     osc.frequency.setValueAtTime(150, now);
                     osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.4);
-                    gain.gain.setValueAtTime(1.2, now);
+                    gain.gain.setValueAtTime(1.2 * trackVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
                     osc.start(now); osc.stop(now + 0.4);
                     break;
@@ -234,39 +276,16 @@
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(220, now);
                     osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
-                    gain.gain.setValueAtTime(0.8, now);
+                    gain.gain.setValueAtTime(0.8 * trackVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
                     osc.start(now); osc.stop(now + 0.25);
                     break;
                 case 2: // Open Hat
                     osc.type = 'square';
                     osc.frequency.setValueAtTime(9000, now);
-                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.setValueAtTime(0.25 * trackVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
                     osc.start(now); osc.stop(now + 0.3);
                     break;
                 case 3: // Closed Hat
                     osc.type = 'square';
-                    osc.frequency.setValueAtTime(11000, now);
-                    gain.gain.setValueAtTime(0.3, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
-                    osc.start(now); osc.stop(now + 0.06);
-                    break;
-                case 4: // Synth Low (Bassline note)
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(110, now); // A2 pitch frequency node
-                    gain.gain.setValueAtTime(0.3, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-                    osc.start(now); osc.stop(now + 0.35);
-                    break;
-                case 5: // Synth Mid
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(329.63, now); // E4 pitch frequency node
-                    gain.gain.setValueAtTime(0.35, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-                    osc.start(now); osc.stop(now + 0.35);
-                    break;
-                case 6: // Synth High (Melodic top layer)
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(523.25, now); // C5 pitch frequency node
-                    gain.gain.setValueAtTime(0.35, now);
