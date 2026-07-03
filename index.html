@@ -3,194 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Face Grid Arena</title>
+    <title>GitHub Cyberband Sequencer</title>
     <style>
-        body { background: #0c0014; color: #ff0055; font-family: 'Arial Black', sans-serif; text-align: center; margin: 0; padding: 15px; user-select: none; }
-        .arcade-cabinet { max-width: 400px; margin: 10px auto; background: #1a0033; border: 4px solid #ff0055; box-shadow: 0 0 20px #ff0055; padding: 15px; border-radius: 8px; }
-        
-        /* The Main Mad Face Monitor Screen */
-        .monitor { background: #000; border: 2px solid #00ffff; padding: 10px; margin-bottom: 15px; }
-        #boss-expression { font-size: 70px; margin: 5px 0; text-shadow: 0 0 15px #ff0000; transition: transform 0.1s; }
-        #phase-title { font-size: 15px; color: #00ffff; font-family: monospace; font-weight: bold; }
-        
-        /* Health Meter Styling */
-        .meter-box { background: #222; width: 100%; height: 16px; border: 1px solid #fff; margin-top: 5px; overflow: hidden; }
-        .meter-fill { height: 100%; width: 100%; transition: width 0.15s; }
-        
-        /* Direct Action Button Grid Layout Matrix Slots */
-        .action-matrix { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
-        .grid-button { height: 80px; background: #330066; border: 2px solid #5500aa; border-radius: 6px; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .active-strike-zone { background: #ff0055; border-color: #fff; box-shadow: 0 0 15px #ff0055; font-size: 30px; }
-        
-        .control-btn { background: #00ffff; color: #000; border: 2px solid #fff; padding: 12px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 0 10px #00ffff; }
-        .control-btn:disabled { background: #224444; color: #555; border-color: #333; box-shadow: none; cursor: not-allowed; }
+        :root {
+            --bg-color: #0d1117;
+            --container-bg: #161b22;
+            --border-color: #30363d;
+            --accent-active: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.4);
+            --text-main: #c9d1d9;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .sequencer-container {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            align-items: center;
+        }
+
+        button {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #30363d;
+            border-color: #8b949e;
+        }
+
+        button.playing {
+            background-color: #238636;
+            color: #ffffff;
+            border-color: #2ea44f;
+            box-shadow: 0 0 10px rgba(46, 164, 79, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 80px repeat(8, 1fr);
+            gap: 8px;
+        }
+
+        .row-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pad {
+            aspect-ratio: 1;
+            background-color: #21262d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.1s, box-shadow 0.1s;
+        }
+
+        .pad:hover {
+            background-color: #30363d;
+        }
+
+        .pad.active {
+            background-color: var(--accent-active);
+            border-color: #79c0ff;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .pad.current-step {
+            outline: 2px solid #ffffff;
+            outline-offset: 1px;
+        }
     </style>
 </head>
 <body>
 
-<div class="arcade-cabinet">
-    <!-- Active Shifting Mad Face Monitor Display Header -->
-    <div class="monitor">
-        <div id="phase-title">PHASE 1: ANNOYED STARE</div>
-        <div id="boss-expression">😠</div>
-        
-        <div style="font-family: monospace; font-size: 11px; text-align: left; color: #ff0055; font-weight: bold; margin-top: 5px;">BOSS LIFE CORE:</div>
-        <div class="meter-box"><div id="boss-bar" class="meter-fill" style="background: #ff0055; width: 100%;"></div></div>
+    <h1>🤖 Cyberband Neo</h1>
+    <p>Click pads to sketch a custom synth beat loop, then hit play!</p>
+
+    <div class="sequencer-container">
+        <div class="controls">
+            <button id="playBtn">START BEAT</button>
+            <button id="clearBtn">CLEAR ALL</button>
+        </div>
+
+        <div class="grid" id="sequencerGrid">
+            <!-- Labels and pads will be generated via JavaScript -->
+        </div>
     </div>
 
-    <!-- Live HUD Status Trackers Panel -->
-    <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; font-weight: bold; color: #fff; margin-bottom: 10px;">
-        <div>PLAYER DATA-LINK: <span id="player-hp-text" style="color:#00ff66;">100/100</span></div>
-        <div>SCORE: <span id="score-text" style="color:#ffff00;">0</span></div>
-    </div>
-    <div class="meter-box" style="margin-bottom: 15px; height: 8px;"><div id="player-bar" class="meter-fill" style="background: #00ff66; width: 100%;"></div></div>
-
-    <!-- Whack-A-Mole Combat Matrix Slots Grid Layout -->
-    <div class="action-matrix">
-        <button class="grid-button" id="btn-0" onclick="pressGridZone(0)"></button>
-        <button class="grid-button" id="btn-1" onclick="pressGridZone(1)"></button>
-        <button class="grid-button" id="btn-2" onclick="pressGridZone(2)"></button>
-        <button class="grid-button" id="btn-3" onclick="pressGridZone(3)"></button>
-        <button class="grid-button" id="btn-4" onclick="pressGridZone(4)"></button>
-        <button class="grid-button" id="btn-5" onclick="pressGridZone(5)"></button>
-        <button class="grid-button" id="btn-6" onclick="pressGridZone(6)"></button>
-        <button class="grid-button" id="btn-7" onclick="pressGridZone(7)"></button>
-        <button class="grid-button" id="btn-8" onclick="pressGridZone(8)"></button>
-    </div>
-
-    <!-- Special Super Ability Skill Trigger Button Slot -->
-    <button id="super-power-btn" class="control-btn" onclick="activateSuperNuke()" style="margin-bottom: 10px;" disabled>SUPER VOLLEY: 0% [READY AT 100%]</button>
-    <button id="engine-start-btn" class="control-btn" onclick="bootArcadeProgram()" style="background: #00ff66; box-shadow: 0 0 10px #00ff66;">BOOT ARENA MATCH</button>
-</div>
-
-<script>
-    let isGameRunning = false, heroHp = 100, currentScore = 0, phaseRank = 1;
-    let bossLife = 1000, maxBossLife = 1000, skillCharge = 0;
-    let rotationClock, activeTargetId = -1;
-
-    // Configured map tracking 10 distinct phases of increasing facial rage expressions
-    const furyLevels = {
-        1: { heading: "Phase 1: Annoyed Stare", face: "😠", hue: "#33ff33", timing: 950, attack: 5 },
-        2: { heading: "Phase 2: Rising Irritation", face: "😠", hue: "#00ffff", timing: 850, attack: 7 },
-        3: { heading: "Phase 3: Deep Scowl", face: "😡", hue: "#00aaff", timing: 800, attack: 10 },
-        4: { heading: "Phase 4: Flushed Cheeks", face: "😡", hue: "#a000ff", timing: 750, attack: 12 },
-        5: { heading: "Phase 5: Steam Piped", face: "🤬", hue: "#ff00ff", timing: 700, attack: 15 },
-        6: { heading: "Phase 6: Red Hot Temper", face: "🤬", hue: "#ff0066", timing: 650, attack: 18 },
-        7: { heading: "Phase 7: Evil Glare", face: "😈", hue: "#ff3300", timing: 600, attack: 22 },
-        8: { heading: "Phase 8: Uncontained Rage", face: "😈", hue: "#ffff00", timing: 550, attack: 25 },
-        9: { heading: "Phase 9: Oni Monster Outbreak", face: "👹", hue: "#ffffff", timing: 500, attack: 30 },
-        10: { heading: "Phase 10: Absolute Doomsday Melt", face: "👺", hue: "#ff0000", timing: 420, attack: 38 }
-    };
-
-    function bootArcadeProgram() {
-        heroHp = 100; bossLife = 1000; currentScore = 0; phaseRank = 1; skillCharge = 0;
-        document.getElementById('engine-start-btn').style.display = "none";
+    <script>
+        const tracks = ['Kick', 'Snare', 'Hi-Hat', 'Synth'];
+        const steps = 8;
+        let isPlaying = false;
+        let currentStep = 0;
+        let intervalId = null;
         
-        const oldPanel = document.getElementById('terminal-end-panel');
-        if (oldPanel) oldPanel.remove();
-        
-        isGameRunning = true;
-        refreshScreenHUD();
-        syncSpecialMeterButton();
-        executeTargetShift();
-    }
+        // Audio Context setup initialization
+        let audioCtx = null;
 
-    function executeTargetShift() {
-        clearTimeout(rotationClock);
-        if (!isGameRunning) return;
+        // Visual elements setup
+        const grid = document.getElementById('sequencerGrid');
+        const playBtn = document.getElementById('playBtn');
+        const clearBtn = document.getElementById('clearBtn');
 
-        // Apply a damage penalty if a node cycled out before you clicked it
-        if (activeTargetId !== -1) {
-            let activeBtn = document.getElementById(`btn-${activeTargetId}`);
-            if (activeBtn.classList.contains('active-strike-zone')) {
-                activeBtn.classList.remove('active-strike-zone');
-                activeBtn.innerText = "";
-                penalizePlayerHull(furyLevels[phaseRank].attack);
+        // Build internal matrix tracking state
+        const gridState = tracks.map(() => Array(steps).fill(false));
+
+        // UI Grid initialization loop
+        tracks.forEach((trackName, rowIndex) => {
+            const label = document.createElement('div');
+            label.className = 'row-label';
+            label.textContent = trackName;
+            grid.appendChild(label);
+
+            for (let colIndex = 0; colIndex < steps; colIndex++) {
+                const pad = document.createElement('div');
+                pad.className = 'pad';
+                pad.dataset.row = rowIndex;
+                pad.dataset.col = colIndex;
+
+                pad.addEventListener('click', () => {
+                    const active = gridState[rowIndex][colIndex];
+                    gridState[rowIndex][colIndex] = !active;
+                    pad.classList.toggle('active');
+                });
+
+                grid.appendChild(pad);
+            }
+        });
+
+        // Synthetic Instruments Synthesis Logic via Web Audio API
+        function playSound(trackIndex) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (trackIndex === 0) { // Kick Drum configuration
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.3);
+                gain.gain.setValueAtTime(1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } 
+            else if (trackIndex === 1) { // Snare Drum configuration
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                gain.gain.setValueAtTime(0.7, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } 
+            else if (trackIndex === 2) { // Hi-Hat configuration
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(10000, now);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } 
+            else if (trackIndex === 3) { // Synth Lead Melody configuration
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now); // A4 pitch node
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
             }
         }
 
-        // Calculate a random target index to activate
-        activeTargetId = Math.floor(Math.random() * 9);
-        let freshTarget = document.getElementById(`btn-${activeTargetId}`);
-        freshTarget.classList.add('active-strike-zone');
-        freshTarget.innerText = "💥";
+        // Loop Sequence Logic Step Engine
+        function tickEngine() {
+            const allPads = document.querySelectorAll('.pad');
+            allPads.forEach(p => p.classList.remove('current-step'));
 
-        rotationClock = setTimeout(executeTargetShift, furyLevels[phaseRank].timing);
-    }
+            const stepPads = document.querySelectorAll(`[data-col="${currentStep}"]`);
+            stepPads.forEach(pad => {
+                pad.classList.add('current-step');
+                const row = parseInt(pad.dataset.row);
+                if (gridState[row][currentStep]) {
+                    playSound(row);
+                }
+            });
 
-    function pressGridZone(index) {
-        if (!isGameRunning || index !== activeTargetId) return;
-        
-        let targetButton = document.getElementById(`btn-${index}`);
-        if (!targetButton.classList.contains('active-strike-zone')) return;
-
-        // Reset hit button state
-        targetButton.classList.remove('active-strike-zone');
-        targetButton.innerText = "";
-        activeTargetId = -1;
-
-        currentScore += 25;
-        bossLife -= 45;
-        if (bossLife <= 0) { bossLife = 0; closeArcadeMatch(true); return; }
-
-        if (skillCharge < 100) {
-            skillCharge = Math.min(100, skillCharge + 10);
-            syncSpecialMeterButton();
+            currentStep = (currentStep + 1) % steps;
         }
 
-        // Automatic evaluation check for phase updates (10 steps)
-        let determinedRank = 11 - Math.ceil((bossLife / maxBossLife) * 10);
-        if (determinedRank > phaseRank && determinedRank <= 10) {
-            phaseRank = determinedRank;
-            document.getElementById('boss-expression').style.transform = "scale(1.25)";
-            setTimeout(() => document.getElementById('boss-expression').style.transform = "scale(1)", 120);
-        }
+        // Play/Pause Click Handler Event Hook
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                clearInterval(intervalId);
+                playBtn.textContent = "START BEAT";
+                playBtn.classList.remove('playing');
+                const allPads = document.querySelectorAll('.pad');
+                allPads.forEach(p => p.classList.remove('current-step'));
+            } else {
+                currentStep = 0;
+                tickEngine(); 
+                intervalId = setInterval(tickEngine, 300); // 300ms playback pace pacing step engine
+                playBtn.textContent = "STOP BEAT";
+                playBtn.classList.add('playing');
+            }
+            isPlaying = !isPlaying;
+        });
 
-        refreshScreenHUD();
-        executeTargetShift(); // Shift node position immediately upon successful strike
-    }
-
-    function activateSuperNuke() {
-        if (skillCharge < 100 || !isGameRunning) return;
-        skillCharge = 0;
-        syncSpecialMeterButton();
-
-        // High damage strike delivered directly to boss via the special ability
-        bossLife -= 150;
-        currentScore += 50;
-        
-        document.getElementById('boss-expression').style.transform = "rotate(180deg) scale(1.35)";
-        setTimeout(() => document.getElementById('boss-expression').style.transform = "scale(1) rotate(0deg)", 250);
-
-        if (bossLife <= 0) { bossLife = 0; closeArcadeMatch(true); return; }
-
-        let determinedRank = 11 - Math.ceil((bossLife / maxBossLife) * 10);
-        if (determinedRank > phaseRank && determinedRank <= 10) {
-            phaseRank = determinedRank;
-        }
-
-        refreshScreenHUD();
-    }
-
-    function penalizePlayerHull(damageAmount) {
-        heroHp -= damageAmount;
-        if (heroHp < 0) heroHp = 0;
-        refreshScreenHUD();
-
-        if (heroHp <= 0) closeArcadeMatch(false);
-    }
-
-    function syncSpecialMeterButton() {
-        const btn = document.getElementById('super-power-btn');
-        btn.disabled = skillCharge < 100;
-        if (skillCharge >= 100) {
-            btn.innerText = "⚡ DETONATE SUPER VOLLEY [READY]";
-            btn.style.background = "#ff00ff";
-            btn.style.color = "#fff";
-        } else {
-            btn.innerText = `SUPER VOLLEY: ${skillCharge}% [CHARGE AT 100%]`;
-            btn.style.background = "#224444";
-            btn.style.color = "#555";
-        }
-    }
-
+        // Board Cleardown Utility Reset Event Hook
+        clearBtn.addEventListener('click', () => {
+            const allPads = document.querySelectorAll('.pad');
+            allPads.forEach(p => {
+                p.classList.remove('active');
+                p.classList.remove('current-step');
+            });
+            for (let r = 0; r < tracks.length; r++) {
+                gridState[r].fill(false);
+            }
+            if (isPlaying) {
+                playBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
