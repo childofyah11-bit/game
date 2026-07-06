@@ -3,7 +3,7 @@
   canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; } 
   .hud-container { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
   .p1-hud { color: #00ffcc; font-size: 14px; text-align: left; }
-  .p2-hud { color: #ff00ff; font-size: 14px; text-align: right; }
+  .ai-hud { color: #ff00ff; font-size: 14px; text-align: right; }
   .score-hud { color: #ffff00; font-size: 16px; width: 100%; text-align: center; position: absolute; }
 </style> 
 
@@ -12,17 +12,16 @@
   <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1> 
   
   <div class="hud-container">
-    <div id="p1-status" class="p1-hud">P1: ALIVE</div>
+    <div id="p1-status" class="p1-hud">PLAYER: ALIVE</div>
     <div id="score" class="score-hud">SCORE: 0</div> 
-    <div id="p2-status" class="p2-hud">P2: ALIVE</div>
+    <div id="ai-status" class="ai-hud">AI DRONE: ONLINE</div>
   </div>
 
   <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
   
   <p style="color: #888; font-size: 11px; margin-top: 5px; line-height: 1.4;">
-    <b>Player 1:</b> Left / Right Arrows to Move | Space to Shoot<br>
-    <b>Player 2:</b> A / D to Move | W to Shoot<br>
-    <span style="color: #ff4081;">If one dies, survive 30 seconds to respawn them!</span>
+    [Left / Right Arrows to Move | Space to Shoot]<br>
+    <span style="color: #ff00ff;">Your automated AI Companion will target and clear hazards for you!</span>
   </p> 
 </div> 
 
@@ -41,44 +40,36 @@ let lasers = [];
 let clickCount = 0;
 let cheatActive = false;
 
-// Player 1 Configuration (Cyan Delta Wing)
+// Player Configuration (Cyan Delta Wing)
 let p1 = {
-  x: 90,
+  x: 145,
   y: 350,
   w: 26,
   h: 25,
   alive: true,
-  cooldown: 0,
-  respawnTimer: 0
+  cooldown: 0
 };
 
-// Player 2 Configuration (Magenta Square Support Cruiser)
-let p2 = {
-  x: 200,
+// AI Companion Configuration (Magenta Autopilot Support Cruiser)
+let ai = {
+  x: 70,
   y: 350,
   w: 26,
   h: 25,
   alive: true,
   cooldown: 0,
-  respawnTimer: 0
+  respawnTimer: 0,
+  speed: 3.5 // AI tracking calibration speed limit
 };
 
 // Input state dictionary
-const keys = { 
-  ArrowLeft: false, ArrowRight: false, Space: false, Shift: false,
-  KeyA: false, KeyD: false, KeyW: false 
-}; 
+const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
 
 window.addEventListener('keydown', (e) => { 
   if (e.key === "Shift") keys.Shift = true; 
   if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; } 
   if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
   if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
-  
-  // Player 2 Controls mapped explicitly via code standard configurations
-  if (e.code === "KeyA") keys.KeyA = true;
-  if (e.code === "KeyD") keys.KeyD = true;
-  if (e.code === "KeyW") keys.KeyW = true;
 }); 
 
 window.addEventListener('keyup', (e) => { 
@@ -86,10 +77,6 @@ window.addEventListener('keyup', (e) => {
   if (e.key === "ArrowLeft") keys.ArrowLeft = false; 
   if (e.key === "ArrowRight") keys.ArrowRight = false; 
   if (e.key === " ") keys.Space = false; 
-  
-  if (e.code === "KeyA") keys.KeyA = false;
-  if (e.code === "KeyD") keys.KeyD = false;
-  if (e.code === "KeyW") keys.KeyW = false;
 }); 
 
 // EPIC SHIFT + 3-CLICK CHEAT SWITCH 
@@ -111,22 +98,20 @@ document.getElementById('cheat-btn').addEventListener('click', () => {
 function updateHUD() { 
   document.getElementById('score').innerText = `SCORE: ${score}`;
   
-  // Manage Player 1 HUD text readout
   if (p1.alive) {
-    document.getElementById('p1-status').innerText = "P1: ALIVE";
+    document.getElementById('p1-status').innerText = "PLAYER: ALIVE";
     document.getElementById('p1-status').style.color = "#00ffcc";
   } else {
-    document.getElementById('p1-status').innerText = `P1: DEAD (${Math.ceil(p1.respawnTimer / 60)}s)`;
+    document.getElementById('p1-status').innerText = "PLAYER: CRASHED";
     document.getElementById('p1-status').style.color = "#ff4081";
   }
 
-  // Manage Player 2 HUD text readout
-  if (p2.alive) {
-    document.getElementById('p2-status').innerText = "P2: ALIVE";
-    document.getElementById('p2-status').style.color = "#ff00ff";
+  if (ai.alive) {
+    document.getElementById('ai-status').innerText = "AI DRONE: ONLINE";
+    document.getElementById('ai-status').style.color = "#ff00ff";
   } else {
-    document.getElementById('p2-status').innerText = `P2: DEAD (${Math.ceil(p2.respawnTimer / 60)}s)`;
-    document.getElementById('p2-status').style.color = "#ff4081";
+    document.getElementById('ai-status').innerText = `AI REBUILDING (${Math.ceil(ai.respawnTimer / 60)}s)`;
+    document.getElementById('ai-status').style.color = "#ff4081";
   }
 } 
 
@@ -139,17 +124,14 @@ function resetGame() {
   cheatActive = false;
   document.getElementById('cheat-btn').style.color = '#00ffcc';
 
-  // Re-initialize Player 1 states
-  p1.x = 90;
+  p1.x = 145;
   p1.alive = true;
   p1.cooldown = 0;
-  p1.respawnTimer = 0;
 
-  // Re-initialize Player 2 states
-  p2.x = 200;
-  p2.alive = true;
-  p2.cooldown = 0;
-  p2.respawnTimer = 0;
+  ai.x = 70;
+  ai.alive = true;
+  ai.cooldown = 0;
+  ai.respawnTimer = 0;
 
   updateHUD(); 
   loop(); 
@@ -162,7 +144,7 @@ function loop() {
     ctx.fillStyle = '#ff4081'; 
     ctx.font = 'bold 20px sans-serif'; 
     ctx.textAlign = 'center'; 
-    ctx.fillText('💥 BOTH SHIPS CRASHED 💥', 160, 180); 
+    ctx.fillText('💥 MISSION FAILED 💥', 160, 180); 
     ctx.font = '13px sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.fillText('Click the Title to Restart', 160, 220);
@@ -172,10 +154,10 @@ function loop() {
   ctx.clearRect(0, 0, 320, 400); 
   frame++; 
 
-  // --- PLAYER 1 ENGINE (Arrow Keys) ---
+  // --- PLAYER ENGINE ---
   if (p1.alive) {
-    if (keys.ArrowLeft && p1.x > 0) p1.x -= 4.5; 
-    if (keys.ArrowRight && p1.x < 294) p1.x += 4.5; 
+    if (keys.ArrowLeft && p1.x > 0) p1.x -= 5; 
+    if (keys.ArrowRight && p1.x < 294) p1.x += 5; 
     if (p1.cooldown > 0) p1.cooldown--; 
 
     if (keys.Space && p1.cooldown === 0) { 
@@ -183,7 +165,7 @@ function loop() {
       p1.cooldown = cheatActive ? 3 : 15; 
     } 
 
-    // Draw Player 1 Triangle Fighter (Cyan Jet)
+    // Draw Player Triangle Fighter (Cyan Jet)
     ctx.fillStyle = '#00ffcc'; 
     ctx.beginPath(); 
     ctx.moveTo(p1.x + 13, p1.y); 
@@ -191,55 +173,68 @@ function loop() {
     ctx.lineTo(p1.x, p1.y + p1.h); 
     ctx.closePath(); 
     ctx.fill(); 
-  } else {
-    // Process Respawn Logic Countdowns
-    p1.respawnTimer--;
-    if (p1.respawnTimer <= 0) {
-      p1.alive = true;
-      p1.x = 145; // Respawn safely in middle
-    }
   }
 
-  // --- PLAYER 2 ENGINE (A / D / W Keys) ---
-  if (p2.alive) {
-    if (keys.KeyA && p2.x > 0) p2.x -= 4.5; 
-    if (keys.KeyD && p2.x < 294) p2.x += 4.5; 
-    if (p2.cooldown > 0) p2.cooldown--; 
+  // --- AUTOMATED AI COMPANION ENGINE ---
+  if (ai.alive) {
+    // 1. Find the target asteroid (look for the lowest asteroid on screen)
+    let target = null;
+    let lowestY = -999;
+    
+    for (let i = 0; i < asteroids.length; i++) {
+      if (asteroids[i].y > lowestY) {
+        lowestY = asteroids[i].y;
+        target = asteroids[i];
+      }
+    }
 
-    if (keys.KeyW && p2.cooldown === 0) { 
-      // Support ship shoots wider defensive projectiles
-      lasers.push({ x: p2.x + 11, y: p2.y, color: '#ff00ff' }); 
-      p2.cooldown = cheatActive ? 3 : 15; 
-    } 
+    // 2. Fly horizontally toward the target rock
+    if (target) {
+      let targetCenterX = target.x + (target.size / 2);
+      let aiCenterX = ai.x + (ai.w / 2);
 
-    // Draw Player 2 Block Support Cruiser (Magenta Armor Ship)
+      if (aiCenterX < targetCenterX - 4) {
+        ai.x += ai.speed;
+      } else if (aiCenterX > targetCenterX + 4) {
+        ai.x -= ai.speed;
+      }
+
+      // 3. Automated gun matrix firing router
+      if (ai.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 25) {
+        lasers.push({ x: ai.x + 11, y: ai.y, color: '#ff00ff' }); 
+        ai.cooldown = cheatActive ? 3 : 22; // Fires slightly slower than player normally
+      }
+    }
+    
+    if (ai.cooldown > 0) ai.cooldown--;
+
+    // Keep AI on the grid borders safely
+    if (ai.x < 0) ai.x = 0;
+    if (ai.x > 294) ai.x = 294;
+
+    // Draw AI Support Cruiser (Magenta)
     ctx.fillStyle = '#ff00ff'; 
-    ctx.fillRect(p2.x, p2.y + 8, p2.w, p2.h - 8);
-    ctx.fillRect(p2.x + 8, p2.y, 10, 8); // Top gun node tower
+    ctx.fillRect(ai.x, ai.y + 8, ai.w, ai.h - 8);
+    ctx.fillRect(ai.x + 8, ai.y, 10, 8); 
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(p2.x + 4, p2.y + 12, 4, 4); // Cool cockpit lights
-    ctx.fillRect(p2.x + 18, p2.y + 12, 4, 4);
+    ctx.fillRect(ai.x + 4, ai.y + 12, 4, 4); // Autonomous processor core visual blinkers
+    ctx.fillRect(ai.x + 18, ai.y + 12, 4, 4);
   } else {
-    p2.respawnTimer--;
-    if (p2.respawnTimer <= 0) {
-      p2.alive = true;
-      p2.x = 145;
+    // Rebuild count matrix loop
+    ai.respawnTimer--;
+    if (ai.respawnTimer <= 0) {
+      ai.alive = true;
+      ai.x = p1.x; // Warp back straight to player coordinates
     }
   }
 
-  // Double Defeat Game State Safety Check
-  if (!p1.alive && !p2.alive) {
-    isOver = true;
-  }
-
-  // --- HARM OBJECTS SPAWNER (Asteroids) ---
-  // Speed escalates progressively alongside current total game scores
-  if (frame % Math.max(15, 40 - Math.floor(score / 50)) === 0) { 
+  // --- ASTEROIDS SPAWNER ---
+  if (frame % Math.max(15, 40 - Math.floor(score / 60)) === 0) { 
     asteroids.push({ 
       x: Math.random() * 290, 
       y: -20, 
       size: Math.random() * 15 + 15, 
-      speed: Math.random() * 2 + 1.8 + (score / 300)
+      speed: Math.random() * 2 + 1.8 + (score / 350)
     }); 
   } 
 
@@ -263,7 +258,7 @@ function loop() {
     if (l && l.y < -20) lasers.splice(i, 1); 
   } 
 
-  // --- ASTEROIDS PHYSICS MATRIX ENGINE ---
+  // --- ASTEROIDS COLLISION TESTING ---
   for (let b = asteroids.length - 1; b >= 0; b--) { 
     let ast = asteroids[b]; 
     ast.y += ast.speed; 
@@ -271,18 +266,17 @@ function loop() {
     ctx.fillStyle = '#ff9900'; 
     ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
 
-    // Handle Player 1 Collision Boundary Tests
+    // Player Check (If player dies, mission ends immediately)
     if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { 
       p1.alive = false;
-      p1.respawnTimer = 1800; // 1800 frames = exactly 30 seconds at 60 FPS
-      asteroids.splice(b, 1);
+      isOver = true; 
       continue; 
     } 
 
-    // Handle Player 2 Collision Boundary Tests
-    if (p2.alive && p2.x < ast.x + ast.size && p2.x + p2.w > ast.x && p2.y < ast.y + ast.size && p2.y + p2.h > ast.y) { 
-      p2.alive = false;
-      p2.respawnTimer = 1800; 
+    // AI Companion Check (Triggers 30 second offline rebuild sequence)
+    if (ai.alive && ai.x < ast.x + ast.size && ai.x + ai.w > ast.x && ai.y < ast.y + ast.size && ai.y + ai.h > ast.y) { 
+      ai.alive = false;
+      ai.respawnTimer = 1800; // 30 seconds at 60 FPS
       asteroids.splice(b, 1);
       continue; 
     } 
@@ -290,12 +284,10 @@ function loop() {
     if (ast.y > 420) asteroids.splice(b, 1); 
   } 
 
-  // Track ticking data output onto UI elements live
   updateHUD(); 
 
   requestAnimationFrame(loop); 
 } 
 
-// Start initialization routines
 loop(); 
 </script>
