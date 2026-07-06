@@ -1,34 +1,105 @@
-<style>
-  #game-box {
-    text-align: center;
-    font-family: sans-serif;
-    background: #040407;
-    color: #00ffcc;
-    padding: 15px;
-  }
-  canvas {
-    background: #0d0d1a;
-    border: 2px solid #ff4081;
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(255, 64, 129, 0.2);
-    outline: none;
-  }
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌌 Cyber Dodger Arcade</title>
+  <style>
+    /* GitHub Pages Modern Center Layout Layout */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #04040a;
+      color: #00ffcc;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
 
-<div id="game-box">
+    #arcade-container {
+      text-align: center;
+      background: #090914;
+      padding: 25px;
+      border-radius: 16px;
+      border: 1px solid #1f1f3d;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    h1 {
+      font-size: 26px;
+      margin: 0 0 10px 0;
+      letter-spacing: 2px;
+      cursor: pointer;
+      user-select: none;
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
+    }
+
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      width: 320px;
+      margin: 0 auto 15px auto;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    #score-lbl {
+      color: #00ffcc;
+    }
+
+    #revive-lbl {
+      color: #ff00ff;
+    }
+
+    canvas {
+      background: #0d0d1f;
+      border: 2px solid #ff4081;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(255, 64, 129, 0.25);
+      outline: none;
+      display: block;
+    }
+
+    .instructions {
+      color: #5c5c7d;
+      font-size: 12px;
+      margin-top: 15px;
+      line-height: 1.5;
+      user-select: none;
+    }
+
+    b {
+      color: #a4a4c4;
+    }
+  </style>
+</head>
+<body>
+
+<div id="arcade-container">
   <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! -->
-  <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1>
-  <div id="score" style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">SCORE: 0</div>
-  <div id="revive-status" style="font-size: 12px; color: #ff00ff; font-weight: bold; margin-bottom: 10px;">REVIVE RESERVES: 0</div>
+  <h1 id="cheat-btn">CYBER DODGER</h1>
+  
+  <div class="dashboard">
+    <div id="score-lbl">SCORE: 0</div>
+    <div id="revive-lbl">REVIVES: 0</div>
+  </div>
+
   <canvas id="canvas" width="320" height="400" tabindex="1"></canvas>
-  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Arrows to Move | Space to Shoot | UP Arrow for Shield]</p>
+  
+  <div class="instructions">
+    <b>[Left / Right Arrows]</b> Move &nbsp;|&nbsp; <b>[Space]</b> Fire Cannons<br>
+    <b>[Up Arrow]</b> Emergency Plasma Shield Barrier
+  </div>
 </div>
 
 <script>
   const cvs = document.getElementById('canvas');
   const ctx = cvs.getContext('2d');
 
-  // Explicit safe global baseline declarations
+  // Baseline Failsafe Engine Variables
   let score = 0, isOver = false, frame = 0, blocks = [], lasers = [], crates = [];
   let playerX = 145, clickCount = 0, cheatActive = false;
   let weaponCooldown = 0; 
@@ -64,10 +135,8 @@
       if (shieldAvailable && !isOver) {
         shieldActive = true;
         shieldAvailable = false;
-        // Shield falls automatically after 4 seconds
-        setTimeout(() => { shieldActive = false; }, 4000);
-        // Automatically reloads after 30 seconds
-        setTimeout(() => { shieldAvailable = true; }, 30000);
+        setTimeout(() => { shieldActive = false; }, 4000); // 4 Seconds Active
+        setTimeout(() => { shieldAvailable = true; }, 30000); // 30 Seconds Recharge
       }
     }
     if (e.key === " ") { e.preventDefault(); keys.Space = true; }
@@ -94,8 +163,9 @@
     }
   });
 
-  function updateReviveUI() {
-    document.getElementById('revive-status').innerText = `REVIVE RESERVES: ${reviveReservesCount}`;
+  function updateDashboardUI() {
+    document.getElementById('score-lbl').innerText = `SCORE: ${score}`;
+    document.getElementById('revive-lbl').innerText = `REVIVES: ${reviveReservesCount}`;
   }
 
   function loop() {
@@ -105,14 +175,17 @@
       ctx.fillStyle = '#ff4081';
       ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('💥 OVERWHELMED! 💥', 160, 200);
+      ctx.fillText('💥 SYSTEM OVERWHELMED 💥', 160, 180);
+      ctx.fillStyle = '#5c5c7d';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('Click inside the canvas grid to restart', 160, 220);
       return;
     }
 
     ctx.clearRect(0, 0, 320, 400);
     frame++;
 
-    // Ticks color spectrum indices every 5 seconds (300 frames)
+    // Cycle projectile spectrum profiles every 5 seconds
     currentLaserColorIndex = Math.floor(frame / 300) % laserColorsList.length;
 
     if (keys.ArrowLeft && playerX > 0) playerX -= 6;
@@ -121,32 +194,28 @@
     if (weaponCooldown > 0) weaponCooldown--;
     if (tripleShotTimer > 0) tripleShotTimer--;
 
-    // FIXED: Corrected reference mismatch from cooldown to weaponCooldown
+    // Firing execution router
     if (keys.Space && weaponCooldown === 0) {
       if (tripleShotTimer > 0) {
-        // Buffed Weapon: Fires 3 separate diagonal spreading streams at once
         lasers.push({ x: playerX + 11, y: 340, w: 4, h: 10, vx: 0 });
         lasers.push({ x: playerX + 5, y: 340, w: 4, h: 10, vx: -2 });
         lasers.push({ x: playerX + 17, y: 340, w: 4, h: 10, vx: 2 });
         weaponCooldown = cheatActive ? 4 : 12;
       } else {
-        // Standard Weapon Fire Pattern
         let bSize = cheatActive ? 16 : 4;
         lasers.push({ x: playerX + 13 - (bSize / 2), y: 340, w: bSize, h: 10, vx: 0 });
         weaponCooldown = cheatActive ? 4 : 15;
       }
     }
 
-    // DRAW THEMED PLAYER SHIPS (Uses safe native geometric shapes)
+    // DRAW SHIPS (Pure native rendering commands to protect cross-browser compatibility)
     if (isApexEvolutionUnlocked) {
-      // Evolved Look: Wide royal-purple Overlord Dreadnought hull plate
       ctx.fillStyle = '#df00ff';
       ctx.fillRect(playerX, 365, 26, 12);
       ctx.fillRect(playerX + 5, 355, 16, 10);
       ctx.fillStyle = '#00ffff';
       ctx.fillRect(playerX + 11, 359, 4, 6); 
     } else {
-      // Default Look: Clean neon-cyan delta wings ship
       ctx.fillStyle = '#00ffcc';
       ctx.beginPath();
       ctx.moveTo(playerX + 13, 350); 
@@ -165,7 +234,7 @@
       ctx.fillText("TRIPLE SHOT", playerX + 13, 345);
     }
 
-    // Shield Bubble outline designs
+    // Draw defensive plasma bubble field
     if (shieldActive) {
       ctx.strokeStyle = shieldAvailable ? '#00ffcc' : '#ff00ff';
       ctx.lineWidth = 3;
@@ -174,7 +243,7 @@
       ctx.stroke();
     }
 
-    // Spawn Help Weapon Box Drops
+    // Spawn Supply Drops
     if (frame % 850 === 0) {
       let isPurpleBox = (score >= 2000 && Math.random() > 0.4);
       crates.push({ 
@@ -191,22 +260,21 @@
       ctx.font = "20px sans-serif";
       ctx.fillText(crate.variant === 'purple' ? "💠" : "📦", crate.x, crate.y);
 
-      // Collection Hitbox Checks
       if (playerX < crate.x + 20 && playerX + 26 > crate.x && 350 < crate.y && 380 > crate.y) {
         if (crate.variant === 'purple') {
           isApexEvolutionUnlocked = true; 
           reviveReservesCount++; 
-          updateReviveUI();
         } else {
           tripleShotTimer = 360; 
         }
+        updateDashboardUI();
         crates.splice(c, 1);
         continue;
       }
       if (crate.y > 420) crates.splice(c, 1);
     }
 
-    // Process Lasers Physics Loops
+    // Process Active Lasers Physics Loops
     for (let i = lasers.length - 1; i >= 0; i--) {
       let l = lasers[i];
       l.y -= 8;
@@ -215,7 +283,6 @@
       ctx.fillStyle = laserColorsList[currentLaserColorIndex];
       ctx.fillRect(l.x, l.y, l.w, l.h);
 
-      // Hit Boss check
       let bossWidth = isSuperBoss ? 70 : 40;
       if (bossActive && l.y > 30 && l.y < 75 && l.x + l.w > bossX && l.x < bossX + bossWidth) {
         lasers.splice(i, 1);
@@ -224,12 +291,11 @@
           bossActive = false;
           score += isSuperBoss ? 150 : 50;
           isSuperBoss = false; 
-          updateScore();
+          updateDashboardUI();
         }
         continue;
       }
 
-      // Hit standard enemy hazards check
       for (let j = blocks.length - 1; j >= 0; j--) {
         let b = blocks[j];
         if (!b.isBossLaser && l.x < b.x + b.size && l.x + l.w > b.x && l.y < b.y + b.size && l.y + l.h > b.y) {
@@ -238,7 +304,7 @@
           if (b.hp <= 0) {
             blocks.splice(j, 1);
             score += 5;
-            updateScore();
+            updateDashboardUI();
           }
           break;
         }
@@ -268,32 +334,7 @@
       if (bossX <= 0 || bossX >= limitBoundary) bossDir *= -1;
 
       if (isSuperBoss) {
-        // DRAW VECTOR HYPER BOSS OVERLORD
         ctx.fillStyle = '#df00ff';
         ctx.fillRect(bossX, 30, 70, 45);
         ctx.fillStyle = '#4b0082';
         ctx.fillRect(bossX + 15, 35, 40, 10);
-        ctx.fillRect(bossX + 5, 55, 15, 15);
-        ctx.fillRect(bossX + 50, 55, 15, 15);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10px monospace';
-        ctx.textAlign = "left";
-        ctx.fillText(`OVERLORD HP: ${bossHP}`, bossX, 20);
-
-        if (frame % 30 === 0) {
-          blocks.push({ x: bossX + 8, y: 75, size: 12, isBossLaser: true, type: 'beam', hp: 1, angle: 0 });
-          blocks.push({ x: bossX + 50, y: 75, size: 12, isBossLaser: true, type: 'beam', hp: 1, angle: 0 });
-        }
-      } else {
-        // DRAW VECTOR STANDARD BOSS
-        ctx.fillStyle = '#ff4081';
-        ctx.fillRect(bossX, 35, 40, 26);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(bossX + 8, 42, 8, 6); 
-        ctx.fillRect(bossX + 24, 42, 8, 6);
-
-        ctx.font = '10px monospace';
-        ctx.textAlign = "left";
-        ctx.fillText(`HP: ${bossHP}`, bossX + 4, 25);
-
