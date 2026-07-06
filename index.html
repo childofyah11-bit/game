@@ -1,6 +1,6 @@
 <style> 
-  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; } 
-  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; } 
+  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; transition: background 0.3s; } 
+  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; transition: border-color 0.3s, box-shadow 0.3s; } 
 </style> 
 
 <div id="game-box"> 
@@ -9,12 +9,26 @@
   <div id="score" style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">SCORE: 0</div> 
   <div id="buff-hud" style="font-size: 12px; color: #ff00ff; height: 15px; margin-bottom: 5px;"></div>
   <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
-  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Left/Right Arrows to Move | Space to Shoot]</p> 
+  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Left/Right to Move | Space to Shoot | <b>Press 1 - 9 to Swap Themes Live!</b>]</p> 
 </div> 
 
 <script> 
 const cvs = document.getElementById('canvas'); 
 const ctx = cvs.getContext('2d'); 
+
+// Theme Engine State Matrix
+const themes = {
+  '1': { name: "Retro Neon Cyber", bg: "#0d0d1a", boxBg: "#040407", border: "#ff4081", asteroid: "#ff9900", text: "#00ffcc" },
+  '2': { name: "Volcanic Core",    bg: "#1a0805", boxBg: "#0d0302", border: "#ff3300", asteroid: "#ffaa00", text: "#ffcc00" },
+  '3': { name: "Forest Matrix",    bg: "#05140b", boxBg: "#020a05", border: "#00ff66", asteroid: "#88cc44", text: "#a3ffa3" },
+  '4': { name: "Frozen Tundra",    bg: "#0a192f", boxBg: "#030d1a", border: "#00ffff", asteroid: "#b3f0ff", text: "#e6faff" },
+  '5': { name: "Deep Void Space",  bg: "#000000", boxBg: "#050505", border: "#ffffff", asteroid: "#444444", text: "#ffffff" },
+  '6': { name: "Hacker Terminal",  bg: "#001100", boxBg: "#000500", border: "#00ff00", asteroid: "#33aa33", text: "#33ff33" },
+  '7': { name: "Synthwave Sunset", bg: "#2b003a", boxBg: "#14001c", border: "#ff007f", asteroid: "#ffff00", text: "#00ffff" },
+  '8': { name: "Royal Empire",     bg: "#100b26", boxBg: "#070412", border: "#ffd700", asteroid: "#c0c0c0", text: "#e6ccff" },
+  '9': { name: "Candy Nebula",     bg: "#261420", boxBg: "#12080f", border: "#ff99bb", asteroid: "#ffccff", text: "#99ffff" }
+};
+let currentTheme = themes['1'];
 
 // Game baseline configurations
 let score = 0, isOver = false, frame = 0, playerX = 145;
@@ -37,6 +51,12 @@ window.addEventListener('keydown', (e) => {
   if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; } 
   if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
   if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
+  
+  // Theme selection engine listening router
+  if (themes[e.key]) {
+    currentTheme = themes[e.key];
+    applyLiveThemeStyling();
+  }
 }); 
 
 window.addEventListener('keyup', (e) => { 
@@ -45,6 +65,14 @@ window.addEventListener('keyup', (e) => {
   if (e.key === "ArrowRight") keys.ArrowRight = false; 
   if (e.key === " ") keys.Space = false; 
 }); 
+
+function applyLiveThemeStyling() {
+  document.getElementById('game-box').style.background = currentTheme.boxBg;
+  document.getElementById('game-box').style.color = currentTheme.text;
+  cvs.style.background = currentTheme.bg;
+  cvs.style.borderColor = currentTheme.border;
+  cvs.style.boxShadow = `0 0 20px ${currentTheme.border}44`;
+}
 
 // EPIC SHIFT + 3-CLICK CHEAT SWITCH 
 document.getElementById('cheat-btn').addEventListener('click', () => { 
@@ -64,9 +92,9 @@ document.getElementById('cheat-btn').addEventListener('click', () => {
 
 function updateUI() { 
   document.getElementById('score').innerText = `SCORE: ${score}`;
-  let hudText = "";
+  let hudText = `Style: ${currentTheme.name} | `;
   if (shieldStock > 0) hudText += `🛡️ SHIELDS: ${shieldStock}  `;
-  if (buffTimer > 0) hudText += `⚡ UPGRADE ACTIVE: ${Math.ceil(buffTimer/60)}s`;
+  if (buffTimer > 0) hudText += `⚡ UPGRADE: ${Math.ceil(buffTimer/60)}s`;
   document.getElementById('buff-hud').innerText = hudText;
 } 
 
@@ -75,7 +103,6 @@ function spawnProceduralUpgrade(x, y) {
   const laserPool = ['double', 'triple', 'spread', 'heavy'];
   const colorsPool = ['#ff00ff', '#00ffff', '#ffff00', '#ff3300', '#9933ff', '#00ffaa'];
   
-  // Mix and match modular properties to form unique item matrices
   upgrades.push({
     x: x,
     y: y,
@@ -91,14 +118,14 @@ function resetGame() {
   score = 0; isOver = false; frame = 0; playerX = 145; 
   asteroids = []; lasers = []; upgrades = []; 
   laserType = 'standard'; laserColor = '#00ff00'; playerSpeed = 5; shieldStock = 0; buffTimer = 0;
-  cheatActive = false; document.getElementById('cheat-btn').style.color = '#00ffcc';
+  cheatActive = false; document.getElementById('cheat-btn').style.color = currentTheme.text;
   updateUI(); loop(); 
 } 
 
 function loop() { 
   if (isOver) { 
     ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, 320, 400); 
-    ctx.fillStyle = '#ff4081'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; 
+    ctx.fillStyle = currentTheme.border; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; 
     ctx.fillText('💥 GAME OVER 💥', 160, 180); 
     ctx.font = '13px sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('Click the Title to Restart', 160, 220);
     return; 
@@ -141,19 +168,19 @@ function loop() {
       lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: 2, vy: -6 });
     } else if (laserType === 'heavy') {
       lasers.push({ x: playerX + 8, y: 345, w: 10, h: 14, vx: 0, vy: -5 });
-      baseCooldown += 6; // Heavy beams fire slightly slower unless using cheat
+      baseCooldown += 6;
     }
     weaponCooldown = cheatActive ? 3 : baseCooldown; 
   } 
 
-  // Player Vector Design
-  ctx.fillStyle = '#00ffcc'; ctx.beginPath(); 
+  // Player Vector Design (Colors dynamically pull structural styling fields)
+  ctx.fillStyle = currentTheme.border; ctx.beginPath(); 
   ctx.moveTo(playerX + 13, 350); ctx.lineTo(playerX + 26, 375); ctx.lineTo(playerX, 375); 
   ctx.closePath(); ctx.fill(); 
 
   // Shield Bubble Visualizer Overlay
   if (shieldStock > 0) {
-    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.strokeStyle = currentTheme.text; ctx.lineWidth = 2; ctx.beginPath();
     ctx.arc(playerX + 13, 363, 20, 0, Math.PI * 2); ctx.stroke();
   }
 
@@ -175,9 +202,8 @@ function loop() {
     ctx.textAlign = 'center';
     ctx.fillText(upg.label, upg.x, upg.y);
 
-    // Hitbox boundary tests
     if (playerX < upg.x + 10 && playerX + 26 > upg.x - 10 && 350 < upg.y && 385 > upg.y) {
-      buffTimer = 480; // 8 seconds of modular buffs
+      buffTimer = 480; 
       if (upg.type === 'weapon') {
         laserType = upg.wType;
         laserColor = upg.color;
@@ -185,7 +211,7 @@ function loop() {
         if (Math.random() > 0.5) {
           shieldStock++;
         } else {
-          playerSpeed = 8; // Supercharged engine speed boost
+          playerSpeed = 8; 
         }
       }
       upgrades.splice(u, 1);
@@ -199,44 +225,16 @@ function loop() {
   for (let i = lasers.length - 1; i >= 0; i--) { 
     let l = lasers[i]; l.y += l.vy; if (l.vx) l.x += l.vx;
 
-    ctx.fillStyle = laserColor; 
+    // Use current upgrade color, or default to theme colors if standard weapon running
+    ctx.fillStyle = (laserType === 'standard') ? currentTheme.text : laserColor; 
     ctx.fillRect(l.x, l.y, l.w, l.h); 
 
     for (let j = asteroids.length - 1; j >= 0; j--) { 
       let a = asteroids[j]; 
       if (l.x < a.x + a.size && l.x + l.w > a.x && l.y < a.y + a.size && l.y + l.h > a.y) { 
-        // 15% Chance an exploded asteroid drops a procedurally generated item in its exact place!
         if (Math.random() < 0.15) {
           spawnProceduralUpgrade(a.x + a.size/2, a.y + a.size/2);
         }
         lasers.splice(i, 1); asteroids.splice(j, 1); 
         score += 10; updateUI(); break; 
       } 
-    } 
-    if (l && (l.y < -20 || l.x < -20 || l.x > 340)) lasers.splice(i, 1); 
-  } 
-
-  // Process Asteroid physics loops
-  for (let b = asteroids.length - 1; b >= 0; b--) { 
-    let ast = asteroids[b]; ast.y += ast.speed; 
-
-    ctx.fillStyle = '#ff9900'; ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
-
-    if (playerX < ast.x + ast.size && playerX + 26 > ast.x && 350 < ast.y + ast.size && 375 > ast.y) { 
-      if (shieldStock > 0) {
-        shieldStock--;
-        asteroids.splice(b, 1);
-        updateUI();
-      } else {
-        isOver = true; 
-      }
-      continue; 
-    } 
-    if (ast.y > 420) asteroids.splice(b, 1); 
-  } 
-
-  requestAnimationFrame(loop); 
-} 
-
-loop(); 
-</script>
