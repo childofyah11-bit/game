@@ -141,7 +141,7 @@ let clickCount = 0;
 title.addEventListener('click',(e)=>{
   if (keys.shift){
     clickCount++;
-    const allowed = ['the first player','bestie'];
+    const allowed = ['the first player 1','bestie'];
     const name = (shopUser && shopUser.name) ? String(shopUser.name).toLowerCase().trim() : '';
     if (clickCount>=3){
       clickCount = 0;
