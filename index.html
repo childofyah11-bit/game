@@ -1,340 +1,310 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌌 Cyber Dodger Arcade</title>
-  <style>
-    /* GitHub Pages Modern Center Layout Layout */
-    body {
-      margin: 0;
-      padding: 0;
-      background: #04040a;
-      color: #00ffcc;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
+<style> 
+  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; } 
+  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; box-shadow: 0 0 15px rgba(255, 64, 129, 0.2); outline: none; } 
+</style> 
 
-    #arcade-container {
-      text-align: center;
-      background: #090914;
-      padding: 25px;
-      border-radius: 16px;
-      border: 1px solid #1f1f3d;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    }
+<div id="game-box"> 
+  <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! --> 
+  <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1> 
+  <div id="score" style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">SCORE: 0</div> 
+  <div id="revive-status" style="font-size: 12px; color: #ff00ff; font-weight: bold; margin-bottom: 10px;">REVIVE RESERVES: 0</div> 
+  <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
+  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Arrows to Move | Space to Shoot | UP Arrow for Shield]</p> 
+</div> 
 
-    h1 {
-      font-size: 26px;
-      margin: 0 0 10px 0;
-      letter-spacing: 2px;
-      cursor: pointer;
-      user-select: none;
-      text-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
-    }
+<script> 
+const cvs = document.getElementById('canvas'); 
+const ctx = cvs.getContext('2d'); 
 
-    .dashboard {
-      display: flex;
-      justify-content: space-between;
-      width: 320px;
-      margin: 0 auto 15px auto;
-      font-weight: bold;
-      font-size: 14px;
-    }
+// Explicit safe global baseline declarations 
+let score = 0, isOver = false, frame = 0, blocks = [], lasers = [], crates = []; 
+let playerX = 145, clickCount = 0, cheatActive = false; 
+let weaponCooldown = 0; 
+let shieldActive = false; 
+let shieldAvailable = true; 
 
-    #score-lbl {
-      color: #00ffcc;
-    }
+// Boss core configurations 
+let bossActive = false, bossX = 130, bossDir = 1, bossHP = 5; 
+let isSuperBoss = false; 
 
-    #revive-lbl {
-      color: #ff00ff;
-    }
+// Chroma Shift Laser Configurations 
+let laserColorsList = ['#00ff00', '#ff00ff', '#00ffff', '#ffea00']; 
+let currentLaserColorIndex = 0; 
 
-    canvas {
-      background: #0d0d1f;
-      border: 2px solid #ff4081;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255, 64, 129, 0.25);
-      outline: none;
-      display: block;
-    }
+// Milestone tracking for the 300-point Hyper Boss Overlord 
+let nextHyperBossMilestone = 300; 
 
-    .instructions {
-      color: #5c5c7d;
-      font-size: 12px;
-      margin-top: 15px;
-      line-height: 1.5;
-      user-select: none;
-    }
+// Player temporary buffs and evolution indicators 
+let tripleShotTimer = 0; 
+let isApexEvolutionUnlocked = false; 
+let reviveReservesCount = 0; 
 
-    b {
-      color: #a4a4c4;
-    }
-  </style>
-</head>
-<body>
+const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
 
-<div id="arcade-container">
-  <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! -->
-  <h1 id="cheat-btn">CYBER DODGER</h1>
+window.addEventListener('keydown', (e) => { 
+  if (e.key === "Shift") keys.Shift = true; 
+  if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; } 
+  if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
   
-  <div class="dashboard">
-    <div id="score-lbl">SCORE: 0</div>
-    <div id="revive-lbl">REVIVES: 0</div>
-  </div>
+  // Shield mapping (30 second cooldown loop) 
+  if (e.key === "ArrowUp") { 
+    e.preventDefault(); 
+    if (shieldAvailable && !isOver) { 
+      shieldActive = true; 
+      shieldAvailable = false; 
+      // Shield falls automatically after 4 seconds 
+      setTimeout(() => { shieldActive = false; }, 4000); 
+      // Automatically reloads after 30 seconds 
+      setTimeout(() => { shieldAvailable = true; }, 30000); 
+    } 
+  } 
+  if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
+}); 
 
-  <canvas id="canvas" width="320" height="400" tabindex="1"></canvas>
-  
-  <div class="instructions">
-    <b>[Left / Right Arrows]</b> Move &nbsp;|&nbsp; <b>[Space]</b> Fire Cannons<br>
-    <b>[Up Arrow]</b> Emergency Plasma Shield Barrier
-  </div>
-</div>
+window.addEventListener('keyup', (e) => { 
+  if (e.key === "Shift") keys.Shift = false; 
+  if (e.key === "ArrowLeft") keys.ArrowLeft = false; 
+  if (e.key === "ArrowRight") keys.ArrowRight = false; 
+  if (e.key === " ") keys.Space = false; 
+}); 
 
-<script>
-  const cvs = document.getElementById('canvas');
-  const ctx = cvs.getContext('2d');
+// SHIFT + 3-CLICK CHEAT SWITCH 
+document.getElementById('cheat-btn').addEventListener('click', () => { 
+  if (keys.Shift) { 
+    clickCount++; 
+    if (clickCount >= 3) { 
+      cheatActive = true; 
+      clickCount = 0; 
+      if (isOver) { resetGame(); } 
+    } 
+  } else { 
+    clickCount = 0; 
+  } 
+}); 
 
-  // Baseline Failsafe Engine Variables
-  let score = 0, isOver = false, frame = 0, blocks = [], lasers = [], crates = [];
-  let playerX = 145, clickCount = 0, cheatActive = false;
-  let weaponCooldown = 0; 
-  let shieldActive = false;
-  let shieldAvailable = true;
+function updateReviveUI() { 
+  document.getElementById('revive-status').innerText = `REVIVE RESERVES: ${reviveReservesCount}`; 
+} 
 
-  // Boss core configurations
-  let bossActive = false, bossX = 130, bossDir = 1, bossHP = 5;
-  let isSuperBoss = false;
+function updateScore() {
+  document.getElementById('score').innerText = `SCORE: ${score}`;
+}
 
-  // Chroma Shift Laser Configurations
-  let laserColorsList = ['#00ff00', '#ff00ff', '#00ffff', '#ffea00'];
-  let currentLaserColorIndex = 0;
+function resetGame() {
+  score = 0;
+  isOver = false;
+  frame = 0;
+  blocks = [];
+  lasers = [];
+  crates = [];
+  playerX = 145;
+  bossActive = false;
+  isSuperBoss = false;
+  tripleShotTimer = 0;
+  isApexEvolutionUnlocked = false;
+  reviveReservesCount = 0;
+  nextHyperBossMilestone = 300;
+  updateScore();
+  updateReviveUI();
+  loop();
+}
 
-  // Milestone tracking for the 300-point Hyper Boss Overlord
-  let nextHyperBossMilestone = 300;
+function handlePlayerDeath() {
+  if (reviveReservesCount > 0) {
+    reviveReservesCount--;
+    updateReviveUI();
+    // Temporary 2-second invulnerability shield on revive
+    shieldActive = true;
+    setTimeout(() => { shieldActive = false; }, 2000);
+    // Clear out surrounding blocks so player doesn't instantly die again
+    blocks = [];
+  } else {
+    isOver = true;
+  }
+}
 
-  // Player temporary buffs and evolution indicators
-  let tripleShotTimer = 0;
-  let isApexEvolutionUnlocked = false; 
-  let reviveReservesCount = 0;
+function loop() { 
+  if (isOver) { 
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; 
+    ctx.fillRect(0,0,320,400); 
+    ctx.fillStyle = '#ff4081'; 
+    ctx.font = 'bold 20px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.fillText('💥 OVERWHELMED! 💥', 160, 200); 
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Click "Dodger game" to Restart', 160, 240);
+    return; 
+  } 
 
-  const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false };
+  ctx.clearRect(0, 0, 320, 400); 
+  frame++; 
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === "Shift") keys.Shift = true;
-    if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; }
-    if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; }
-    
-    // Shield mapping (30 second cooldown loop)
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (shieldAvailable && !isOver) {
-        shieldActive = true;
-        shieldAvailable = false;
-        setTimeout(() => { shieldActive = false; }, 4000); // 4 Seconds Active
-        setTimeout(() => { shieldAvailable = true; }, 30000); // 30 Seconds Recharge
-      }
-    }
-    if (e.key === " ") { e.preventDefault(); keys.Space = true; }
-  });
+  // Ticks color spectrum indices every 5 seconds (300 frames) 
+  currentLaserColorIndex = Math.floor(frame / 300) % laserColorsList.length; 
 
-  window.addEventListener('keyup', (e) => {
-    if (e.key === "Shift") keys.Shift = false;
-    if (e.key === "ArrowLeft") keys.ArrowLeft = false;
-    if (e.key === "ArrowRight") keys.ArrowRight = false;
-    if (e.key === " ") keys.Space = false;
-  });
+  if (keys.ArrowLeft && playerX > 0) playerX -= 6; 
+  if (keys.ArrowRight && playerX < 294) playerX += 6; 
 
-  // SHIFT + 3-CLICK CHEAT SWITCH
-  document.getElementById('cheat-btn').addEventListener('click', () => {
-    if (keys.Shift) {
-      clickCount++;
-      if (clickCount >= 3) {
-        cheatActive = true;
-        clickCount = 0;
-        if (isOver) { resetGame(); }
-      }
-    } else {
-      clickCount = 0;
-    }
-  });
+  if (weaponCooldown > 0) weaponCooldown--; 
+  if (tripleShotTimer > 0) tripleShotTimer--; 
 
-  function updateDashboardUI() {
-    document.getElementById('score-lbl').innerText = `SCORE: ${score}`;
-    document.getElementById('revive-lbl').innerText = `REVIVES: ${reviveReservesCount}`;
+  if (keys.Space && weaponCooldown === 0) { 
+    if (tripleShotTimer > 0) { 
+      // Buffed Weapon: Fires 3 separate diagonal spreading streams at once 
+      lasers.push({ x: playerX + 11, y: 340, w: 4, h: 10, vx: 0 }); 
+      lasers.push({ x: playerX + 5, y: 340, w: 4, h: 10, vx: -2 }); 
+      lasers.push({ x: playerX + 17, y: 340, w: 4, h: 10, vx: 2 }); 
+      weaponCooldown = cheatActive ? 4 : 12; 
+    } else { 
+      // Standard Weapon Fire Pattern 
+      let bSize = cheatActive ? 16 : 4; 
+      lasers.push({ x: playerX + 13 - (bSize / 2), y: 340, w: bSize, h: 10, vx: 0 }); 
+      weaponCooldown = cheatActive ? 4 : 15; 
+    } 
+  } 
+
+  // DRAW THEMED PLAYER SHIPS (Uses safe native geometric shapes) 
+  if (isApexEvolutionUnlocked) { 
+    // Evolved Look: Wide royal-purple Overlord Dreadnought hull plate 
+    ctx.fillStyle = '#df00ff'; 
+    ctx.fillRect(playerX, 365, 26, 12); 
+    ctx.fillRect(playerX + 5, 355, 16, 10); 
+    ctx.fillStyle = '#00ffff'; 
+    ctx.fillRect(playerX + 11, 359, 4, 6); 
+  } else { 
+    // Default Look: Clean neon-cyan delta wings ship 
+    ctx.fillStyle = '#00ffcc'; 
+    ctx.beginPath(); 
+    ctx.moveTo(playerX + 13, 350); 
+    ctx.lineTo(playerX + 26, 375); 
+    ctx.lineTo(playerX, 375); 
+    ctx.closePath(); 
+    ctx.fill(); 
+    ctx.fillStyle = '#00bfff'; 
+    ctx.fillRect(playerX + 10, 362, 6, 8); 
+  } 
+
+  ctx.textAlign = "center"; 
+  if (tripleShotTimer > 0) { 
+    ctx.fillStyle = "#ff00ff"; 
+    ctx.font = "bold 10px sans-serif"; 
+    ctx.fillText("TRIPLE SHOT", playerX + 13, 345); 
+  } 
+
+  // Shield Bubble outline designs 
+  if (shieldActive) { 
+    ctx.strokeStyle = shieldAvailable ? '#00ffcc' : '#ff00ff'; 
+    ctx.lineWidth = 3; 
+    ctx.beginPath(); 
+    ctx.arc(playerX + 13, 364, 22, 0, Math.PI * 2); 
+    ctx.stroke(); 
+  } 
+
+  // Spawn Regular Hazard Blocks
+  if (frame % 40 === 0 && !isSuperBoss) {
+    blocks.push({
+      x: Math.random() * 290,
+      y: -20,
+      size: Math.random() * 15 + 15,
+      isBossLaser: false,
+      hp: 1,
+      speed: Math.random() * 2 + 2
+    });
   }
 
-  function loop() {
-    if (isOver) {
-      ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fillRect(0,0,320,400);
-      ctx.fillStyle = '#ff4081';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('💥 SYSTEM OVERWHELMED 💥', 160, 180);
-      ctx.fillStyle = '#5c5c7d';
-      ctx.font = '13px sans-serif';
-      ctx.fillText('Click inside the canvas grid to restart', 160, 220);
-      return;
-    }
+  // Spawn Help Weapon Box Drops 
+  if (frame % 850 === 0) { 
+    let isPurpleBox = (score >= 2000 || Math.random() > 0.4); 
+    crates.push({ x: Math.random() * 280 + 10, y: -20, variant: isPurpleBox ? 'purple' : 'blue' }); 
+  } 
 
-    ctx.clearRect(0, 0, 320, 400);
-    frame++;
+  // Process Upgrade Crate Drops 
+  for (let c = crates.length - 1; c >= 0; c--) { 
+    let crate = crates[c]; 
+    crate.y += 2.2; 
+    ctx.font = "20px sans-serif"; 
+    ctx.fillText(crate.variant === 'purple' ? "💠" : "📦", crate.x, crate.y); 
 
-    // Cycle projectile spectrum profiles every 5 seconds
-    currentLaserColorIndex = Math.floor(frame / 300) % laserColorsList.length;
-
-    if (keys.ArrowLeft && playerX > 0) playerX -= 6;
-    if (keys.ArrowRight && playerX < 294) playerX += 6;
-
-    if (weaponCooldown > 0) weaponCooldown--;
-    if (tripleShotTimer > 0) tripleShotTimer--;
-
-    // Firing execution router
-    if (keys.Space && weaponCooldown === 0) {
-      if (tripleShotTimer > 0) {
-        lasers.push({ x: playerX + 11, y: 340, w: 4, h: 10, vx: 0 });
-        lasers.push({ x: playerX + 5, y: 340, w: 4, h: 10, vx: -2 });
-        lasers.push({ x: playerX + 17, y: 340, w: 4, h: 10, vx: 2 });
-        weaponCooldown = cheatActive ? 4 : 12;
-      } else {
-        let bSize = cheatActive ? 16 : 4;
-        lasers.push({ x: playerX + 13 - (bSize / 2), y: 340, w: bSize, h: 10, vx: 0 });
-        weaponCooldown = cheatActive ? 4 : 15;
-      }
-    }
-
-    // DRAW SHIPS (Pure native rendering commands to protect cross-browser compatibility)
-    if (isApexEvolutionUnlocked) {
-      ctx.fillStyle = '#df00ff';
-      ctx.fillRect(playerX, 365, 26, 12);
-      ctx.fillRect(playerX + 5, 355, 16, 10);
-      ctx.fillStyle = '#00ffff';
-      ctx.fillRect(playerX + 11, 359, 4, 6); 
-    } else {
-      ctx.fillStyle = '#00ffcc';
-      ctx.beginPath();
-      ctx.moveTo(playerX + 13, 350); 
-      ctx.lineTo(playerX + 26, 375); 
-      ctx.lineTo(playerX, 375);      
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#00bfff';
-      ctx.fillRect(playerX + 10, 362, 6, 8); 
-    }
-
-    ctx.textAlign = "center";
-    if (tripleShotTimer > 0) {
-      ctx.fillStyle = "#ff00ff";
-      ctx.font = "bold 10px sans-serif";
-      ctx.fillText("TRIPLE SHOT", playerX + 13, 345);
-    }
-
-    // Draw defensive plasma bubble field
-    if (shieldActive) {
-      ctx.strokeStyle = shieldAvailable ? '#00ffcc' : '#ff00ff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(playerX + 13, 364, 22, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Spawn Supply Drops
-    if (frame % 850 === 0) {
-      let isPurpleBox = (score >= 2000 && Math.random() > 0.4);
-      crates.push({ 
-        x: Math.random() * 280 + 10, 
-        y: -20, 
-        variant: isPurpleBox ? 'purple' : 'blue' 
-      });
-    }
-
-    // Process Upgrade Crate Drops
-    for (let c = crates.length - 1; c >= 0; c--) {
-      let crate = crates[c];
-      crate.y += 2.2; 
-      ctx.font = "20px sans-serif";
-      ctx.fillText(crate.variant === 'purple' ? "💠" : "📦", crate.x, crate.y);
-
-      if (playerX < crate.x + 20 && playerX + 26 > crate.x && 350 < crate.y && 380 > crate.y) {
-        if (crate.variant === 'purple') {
-          isApexEvolutionUnlocked = true; 
-          reviveReservesCount++; 
-        } else {
-          tripleShotTimer = 360; 
-        }
-        updateDashboardUI();
-        crates.splice(c, 1);
-        continue;
-      }
-      if (crate.y > 420) crates.splice(c, 1);
-    }
-
-    // Process Active Lasers Physics Loops
-    for (let i = lasers.length - 1; i >= 0; i--) {
-      let l = lasers[i];
-      l.y -= 8;
-      if (l.vx) l.x += l.vx; 
-      
-      ctx.fillStyle = laserColorsList[currentLaserColorIndex];
-      ctx.fillRect(l.x, l.y, l.w, l.h);
-
-      let bossWidth = isSuperBoss ? 70 : 40;
-      if (bossActive && l.y > 30 && l.y < 75 && l.x + l.w > bossX && l.x < bossX + bossWidth) {
-        lasers.splice(i, 1);
-        bossHP--;
-        if (bossHP <= 0) {
-          bossActive = false;
-          score += isSuperBoss ? 150 : 50;
-          isSuperBoss = false; 
-          updateDashboardUI();
-        }
-        continue;
-      }
-
-      for (let j = blocks.length - 1; j >= 0; j--) {
-        let b = blocks[j];
-        if (!b.isBossLaser && l.x < b.x + b.size && l.x + l.w > b.x && l.y < b.y + b.size && l.y + l.h > b.y) {
-          lasers.splice(i, 1);
-          b.hp--; 
-          if (b.hp <= 0) {
-            blocks.splice(j, 1);
-            score += 5;
-            updateDashboardUI();
-          }
-          break;
-        }
-      }
-      if (l && (l.y < -20 || l.x < -20 || l.x > 340)) lasers.splice(i, 1);
-    }
-
-    // Boss Core Milestone Engine
-    if (score >= nextHyperBossMilestone && !bossActive) {
-      bossActive = true;
-      isSuperBoss = true;
-      bossHP = 12; 
-      bossX = 110;
-      blocks = []; 
-      nextHyperBossMilestone += 300; 
+    // Collection Hitbox Checks 
+    if (playerX < crate.x + 20 && playerX + 26 > crate.x && 350 < crate.y && 380 > crate.y) { 
+      if (crate.variant === 'purple') { 
+        isApexEvolutionUnlocked = true; 
+        reviveReservesCount++; 
+        updateReviveUI(); 
+      } else { 
+        tripleShotTimer = 360; 
+      } 
+      crates.splice(c, 1); 
+      continue; 
     } 
-    else if (score >= 30 && !bossActive && frame % 400 === 0) {
-      bossActive = true;
-      isSuperBoss = false;
-      bossHP = 5;
-      bossX = Math.random() * 260;
-    }
+    if (crate.y > 420) crates.splice(c, 1); 
+  } 
 
-    if (bossActive) {
-      bossX += (isSuperBoss ? 1.5 : 2) * bossDir;
-      let limitBoundary = isSuperBoss ? 240 : 270;
-      if (bossX <= 0 || bossX >= limitBoundary) bossDir *= -1;
+  // Process Lasers Physics Loops 
+  for (let i = lasers.length - 1; i >= 0; i--) { 
+    let l = lasers[i]; 
+    l.y -= 8; 
+    if (l.vx) l.x += l.vx; 
+    ctx.fillStyle = laserColorsList[currentLaserColorIndex]; 
+    ctx.fillRect(l.x, l.y, l.w, l.h); 
 
-      if (isSuperBoss) {
-        ctx.fillStyle = '#df00ff';
-        ctx.fillRect(bossX, 30, 70, 45);
-        ctx.fillStyle = '#4b0082';
-        ctx.fillRect(bossX + 15, 35, 40, 10);
+    // Hit Boss check 
+    let bossWidth = isSuperBoss ? 70 : 40; 
+    if (bossActive && l.y > 30 && l.y < 75 && l.x + l.w > bossX && l.x < bossX + bossWidth) { 
+      lasers.splice(i, 1); 
+      bossHP--; 
+      if (bossHP <= 0) { 
+        bossActive = false; 
+        score += isSuperBoss ? 150 : 50; 
+        isSuperBoss = false; 
+        updateScore(); 
+      } 
+      continue; 
+    } 
+
+    // Hit standard enemy hazards check 
+    for (let j = blocks.length - 1; j >= 0; j--) { 
+      let b = blocks[j]; 
+      if (!b.isBossLaser && l.x < b.x + b.size && l.x + l.w > b.x && l.y < b.y + b.size && l.y + l.h > b.y) { 
+        lasers.splice(i, 1); 
+        b.hp--; 
+        if (b.hp <= 0) { 
+          blocks.splice(j, 1); 
+          score += 5; 
+          updateScore(); 
+        } 
+        break; 
+      } 
+    } 
+    if (l && (l.y < -20 || l.x < -20 || l.x > 340)) lasers.splice(i, 1); 
+  } 
+
+  // Boss Core Milestone Engine 
+  if (score >= nextHyperBossMilestone && !bossActive) { 
+    bossActive = true; 
+    isSuperBoss = true; 
+    bossHP = 12; 
+    bossX = 110; 
+    blocks = []; 
+    nextHyperBossMilestone += 300; 
+  } else if (score >= 30 && !bossActive && frame % 400 === 0) { 
+    bossActive = true; 
+    isSuperBoss = false; 
+    bossHP = 5; 
+    bossX = Math.random() * 260; 
+  } 
+
+  if (bossActive) { 
+    bossX += (isSuperBoss ? 1.5 : 2) * bossDir; 
+    let limitBoundary = isSuperBoss ? 240 : 270; 
+    if (bossX <= 0 || bossX >= limitBoundary) bossDir *= -1; 
+
+    if (isSuperBoss) { 
+      // DRAW VECTOR HYPER BOSS OVERLORD 
+      ctx.fillStyle = '#df00ff'; 
+      ctx.fillRect(bossX, 30, 70, 45); 
+      ctx.fillStyle = '#4b0082'; 
+      ctx.fillRect(bossX + 15, 35, 40, 10); 
+      ctx.fillRect(bossX + 5, 55, 15, 15); 
+      ctx.fillRect(bossX + 50, 55, 15, 15); 
