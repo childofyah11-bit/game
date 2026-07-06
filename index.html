@@ -1,27 +1,27 @@
 <style> 
-  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; } 
-  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; } 
-  .hud-container { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
-  .p1-hud { color: #00ffcc; font-size: 14px; text-align: left; }
-  .ai-hud { color: #ff00ff; font-size: 14px; text-align: right; }
-  .score-hud { color: #ffff00; font-size: 16px; width: 100%; text-align: center; position: absolute; }
+  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 20px; max-width: 640px; margin: 0 auto; } 
+  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; display: block; margin: 0 auto; } 
+  .hud-container { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; max-width: 600px; margin: 0 auto 5px auto; }
+  .p1-hud { color: #00ffcc; font-size: 14px; text-align: left; width: 33%; }
+  .score-hud { color: #ffff00; font-size: 18px; text-align: center; width: 33%; }
+  .ai-hud { color: #ff00ff; font-size: 14px; text-align: right; width: 33%; }
 </style> 
 
-<div id="game-box" style="position: relative;"> 
-  <!-- THE CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire for BOTH ships! --> 
-  <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1> 
+<div id="game-box"> 
+  <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to deploy your Elite Golden Backup Bot! --> 
+  <h1 id="cheat-btn" style="cursor: pointer; font-size: 26px; margin: 0 0 10px 0; user-select: none;">🌌 Dodger game</h1> 
   
   <div class="hud-container">
     <div id="p1-status" class="p1-hud">PLAYER: ALIVE</div>
     <div id="score" class="score-hud">SCORE: 0</div> 
-    <div id="ai-status" class="ai-hud">AI DRONE: ONLINE</div>
+    <div id="ai-status" class="ai-hud">AI SQUAD: ONLINE</div>
   </div>
 
-  <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
+  <canvas id="canvas" width="600" height="600" tabindex="1"></canvas> 
   
-  <p style="color: #888; font-size: 11px; margin-top: 5px; line-height: 1.4;">
+  <p style="color: #888; font-size: 13px; margin-top: 8px; line-height: 1.4;">
     [Left / Right Arrows to Move | Space to Shoot]<br>
-    <span style="color: #ff00ff;">Your automated AI Companion will target and clear hazards for you!</span>
+    <span style="color: #ffea00; font-weight: bold;" id="cheat-hint">Hold SHIFT and click the title 3 times to unlock secret reinforcements!</span>
   </p> 
 </div> 
 
@@ -29,40 +29,29 @@
 const cvs = document.getElementById('canvas'); 
 const ctx = cvs.getContext('2d'); 
 
-// Global state variables
-let score = 0;
-let isOver = false;
-let frame = 0;
-let asteroids = []; 
-let lasers = []; 
+// Global game trackers
+let score = 0, isOver = false, frame = 0;
+let asteroids = [], lasers = []; 
 
-// Cheat variables
+// Cheat activation variables
 let clickCount = 0;
 let cheatActive = false;
 
-// Player Configuration (Cyan Delta Wing)
-let p1 = {
-  x: 145,
-  y: 350,
-  w: 26,
-  h: 25,
-  alive: true,
-  cooldown: 0
+// Player Core (Cyan Interceptor)
+let p1 = { x: 285, y: 540, w: 26, h: 25, alive: true, cooldown: 0 };
+
+// AI Drone Alpha (Magenta Bot - Standard)
+let aiAlpha = {
+  x: 150, y: 540, w: 26, h: 25,
+  alive: true, cooldown: 0, respawnTimer: 0, speed: 4.5
 };
 
-// AI Companion Configuration (Magenta Autopilot Support Cruiser)
-let ai = {
-  x: 70,
-  y: 350,
-  w: 26,
-  h: 25,
-  alive: true,
-  cooldown: 0,
-  respawnTimer: 0,
-  speed: 3.5 // AI tracking calibration speed limit
+// SECRET CHEAT DRONE: AI Drone Beta (Golden Bot - Elite Backup)
+let aiBeta = {
+  x: 420, y: 540, w: 26, h: 25,
+  alive: false, cooldown: 0, respawnTimer: 0, speed: 5.0 // Moves slightly faster than Alpha!
 };
 
-// Input state dictionary
 const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
 
 window.addEventListener('keydown', (e) => { 
@@ -79,13 +68,20 @@ window.addEventListener('keyup', (e) => {
   if (e.key === " ") keys.Space = false; 
 }); 
 
-// EPIC SHIFT + 3-CLICK CHEAT SWITCH 
+// EXCLUSIVE CHEAT INTERFACE ENGINE ROUTER
 document.getElementById('cheat-btn').addEventListener('click', () => { 
   if (keys.Shift) { 
     clickCount++; 
     if (clickCount >= 3) { 
       cheatActive = true; 
       document.getElementById('cheat-btn').style.color = '#ffea00'; 
+      document.getElementById('cheat-hint').innerText = "🏆 ELITE GOLDEN AI BOT DEPLOYED TO YOUR WING!";
+      document.getElementById('cheat-hint').style.color = '#ffea00';
+      
+      // Instantly inject the hidden Golden Bot into active state configuration matrices
+      aiBeta.alive = true;
+      aiBeta.x = p1.x + 40;
+      
       clickCount = 0; 
       if (isOver) resetGame();
     } 
@@ -98,196 +94,159 @@ document.getElementById('cheat-btn').addEventListener('click', () => {
 function updateHUD() { 
   document.getElementById('score').innerText = `SCORE: ${score}`;
   
-  if (p1.alive) {
-    document.getElementById('p1-status').innerText = "PLAYER: ALIVE";
-    document.getElementById('p1-status').style.color = "#00ffcc";
-  } else {
-    document.getElementById('p1-status').innerText = "PLAYER: CRASHED";
-    document.getElementById('p1-status').style.color = "#ff4081";
-  }
+  let pStatus = p1.alive ? "PLAYER: ALIVE" : "PLAYER: CRASHED";
+  document.getElementById('p1-status').innerText = pStatus;
+  document.getElementById('p1-status').style.color = p1.alive ? "#00ffcc" : "#ff4081";
 
-  if (ai.alive) {
-    document.getElementById('ai-status').innerText = "AI DRONE: ONLINE";
-    document.getElementById('ai-status').style.color = "#ff00ff";
+  // Manage custom squad text loops
+  let activeSquadCount = (aiAlpha.alive ? 1 : 0) + (aiBeta.alive ? 1 : 0);
+  if (cheatActive) {
+    document.getElementById('ai-status').innerText = `AI SQUAD: ${activeSquadCount}/2`;
+    document.getElementById('ai-status').style.color = '#ffea00';
   } else {
-    document.getElementById('ai-status').innerText = `AI REBUILDING (${Math.ceil(ai.respawnTimer / 60)}s)`;
-    document.getElementById('ai-status').style.color = "#ff4081";
+    if (aiAlpha.alive) {
+      document.getElementById('ai-status').innerText = "AI DRONE: ONLINE";
+      document.getElementById('ai-status').style.color = "#ff00ff";
+    } else {
+      document.getElementById('ai-status').innerText = `AI REBUILDING (${Math.ceil(aiAlpha.respawnTimer / 60)}s)`;
+      document.getElementById('ai-status').style.color = "#ff4081";
+    }
   }
 } 
 
 function resetGame() { 
-  score = 0; 
-  isOver = false; 
-  frame = 0; 
-  asteroids = []; 
-  lasers = []; 
-  cheatActive = false;
+  score = 0; isOver = false; frame = 0; asteroids = []; lasers = []; 
+  cheatActive = false; 
   document.getElementById('cheat-btn').style.color = '#00ffcc';
+  document.getElementById('cheat-hint').innerText = "Hold SHIFT and click the title 3 times to unlock secret reinforcements!";
+  document.getElementById('cheat-hint').style.color = '#ffea00';
 
-  p1.x = 145;
-  p1.alive = true;
-  p1.cooldown = 0;
+  p1.x = 285; p1.alive = true; p1.cooldown = 0;
 
-  ai.x = 70;
-  ai.alive = true;
-  ai.cooldown = 0;
-  ai.respawnTimer = 0;
+  aiAlpha.x = 150; aiAlpha.alive = true; aiAlpha.cooldown = 0; aiAlpha.respawnTimer = 0;
+  
+  // Re-lock the golden backup bot upon baseline system wipes
+  aiBeta.alive = false; aiBeta.cooldown = 0; aiBeta.respawnTimer = 0;
 
-  updateHUD(); 
-  loop(); 
+  updateHUD(); loop(); 
 } 
 
 function loop() { 
   if (isOver) { 
-    ctx.fillStyle = 'rgba(0,0,0,0.85)'; 
-    ctx.fillRect(0, 0, 320, 400); 
-    ctx.fillStyle = '#ff4081'; 
-    ctx.font = 'bold 20px sans-serif'; 
-    ctx.textAlign = 'center'; 
-    ctx.fillText('💥 MISSION FAILED 💥', 160, 180); 
-    ctx.font = '13px sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('Click the Title to Restart', 160, 220);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, 600, 600); 
+    ctx.fillStyle = '#ff4081'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; 
+    ctx.fillText('💥 MISSION FAILED 💥', 300, 270); 
+    ctx.font = '16px sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('Click the Title to Restart', 300, 320);
     return; 
   } 
 
-  ctx.clearRect(0, 0, 320, 400); 
+  ctx.clearRect(0, 0, 600, 600); 
   frame++; 
 
-  // --- PLAYER ENGINE ---
+  // Sort current asteroids list array by lowest altitude to assist AI target logic
+  let sortedAsteroids = [...asteroids].sort((itemA, itemB) => itemB.y - itemA.y);
+
+  // --- PLAYER MOVEMENT CONTROL MATRIX ---
   if (p1.alive) {
-    if (keys.ArrowLeft && p1.x > 0) p1.x -= 5; 
-    if (keys.ArrowRight && p1.x < 294) p1.x += 5; 
+    if (keys.ArrowLeft && p1.x > 0) p1.x -= 6; 
+    if (keys.ArrowRight && p1.x < 574) p1.x += 6; 
     if (p1.cooldown > 0) p1.cooldown--; 
 
     if (keys.Space && p1.cooldown === 0) { 
       lasers.push({ x: p1.x + 11, y: p1.y, color: '#00ffcc' }); 
-      p1.cooldown = cheatActive ? 3 : 15; 
+      p1.cooldown = 14; 
     } 
 
-    // Draw Player Triangle Fighter (Cyan Jet)
-    ctx.fillStyle = '#00ffcc'; 
-    ctx.beginPath(); 
-    ctx.moveTo(p1.x + 13, p1.y); 
-    ctx.lineTo(p1.x + 26, p1.y + p1.h); 
-    ctx.lineTo(p1.x, p1.y + p1.h); 
-    ctx.closePath(); 
-    ctx.fill(); 
+    ctx.fillStyle = '#00ffcc'; ctx.beginPath(); 
+    ctx.moveTo(p1.x + 13, p1.y); ctx.lineTo(p1.x + 26, p1.y + p1.h); ctx.lineTo(p1.x, p1.y + p1.h); 
+    ctx.closePath(); ctx.fill(); 
   }
 
-  // --- AUTOMATED AI COMPANION ENGINE ---
-  if (ai.alive) {
-    // 1. Find the target asteroid (look for the lowest asteroid on screen)
-    let target = null;
-    let lowestY = -999;
-    
-    for (let i = 0; i < asteroids.length; i++) {
-      if (asteroids[i].y > lowestY) {
-        lowestY = asteroids[i].y;
-        target = asteroids[i];
+  // --- AUTOMATED AI DRONE ALPHA (Targets Lowest Asteroid) ---
+  if (aiAlpha.alive) {
+    let targetAlpha = sortedAsteroids[0] || null; // Select absolute closest drop target
+
+    if (targetAlpha) {
+      let targetCenterX = targetAlpha.x + (targetAlpha.size / 2);
+      let aiCenterX = aiAlpha.x + (aiAlpha.w / 2);
+
+      if (aiCenterX < targetCenterX - 4) aiAlpha.x += aiAlpha.speed;
+      else if (aiCenterX > targetCenterX + 4) aiAlpha.x -= aiAlpha.speed;
+
+      if (aiAlpha.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 40) {
+        lasers.push({ x: aiAlpha.x + 11, y: aiAlpha.y, color: '#ff00ff' }); 
+        aiAlpha.cooldown = 20; 
       }
     }
+    if (aiAlpha.cooldown > 0) aiAlpha.cooldown--;
+    if (aiAlpha.x < 0) aiAlpha.x = 0; if (aiAlpha.x > 574) aiAlpha.x = 574;
 
-    // 2. Fly horizontally toward the target rock
-    if (target) {
-      let targetCenterX = target.x + (target.size / 2);
-      let aiCenterX = ai.x + (ai.w / 2);
-
-      if (aiCenterX < targetCenterX - 4) {
-        ai.x += ai.speed;
-      } else if (aiCenterX > targetCenterX + 4) {
-        ai.x -= ai.speed;
-      }
-
-      // 3. Automated gun matrix firing router
-      if (ai.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 25) {
-        lasers.push({ x: ai.x + 11, y: ai.y, color: '#ff00ff' }); 
-        ai.cooldown = cheatActive ? 3 : 22; // Fires slightly slower than player normally
-      }
-    }
-    
-    if (ai.cooldown > 0) ai.cooldown--;
-
-    // Keep AI on the grid borders safely
-    if (ai.x < 0) ai.x = 0;
-    if (ai.x > 294) ai.x = 294;
-
-    // Draw AI Support Cruiser (Magenta)
-    ctx.fillStyle = '#ff00ff'; 
-    ctx.fillRect(ai.x, ai.y + 8, ai.w, ai.h - 8);
-    ctx.fillRect(ai.x + 8, ai.y, 10, 8); 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ai.x + 4, ai.y + 12, 4, 4); // Autonomous processor core visual blinkers
-    ctx.fillRect(ai.x + 18, ai.y + 12, 4, 4);
+    // Render Magenta Shell
+    ctx.fillStyle = '#ff00ff'; ctx.fillRect(aiAlpha.x, aiAlpha.y + 8, aiAlpha.w, aiAlpha.h - 8);
+    ctx.fillRect(aiAlpha.x + 8, aiAlpha.y, 10, 8); 
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(aiAlpha.x + 4, aiAlpha.y + 12, 4, 4); ctx.fillRect(aiAlpha.x + 18, aiAlpha.y + 12, 4, 4);
   } else {
-    // Rebuild count matrix loop
-    ai.respawnTimer--;
-    if (ai.respawnTimer <= 0) {
-      ai.alive = true;
-      ai.x = p1.x; // Warp back straight to player coordinates
+    aiAlpha.respawnTimer--;
+    if (aiAlpha.respawnTimer <= 0) { aiAlpha.alive = true; aiAlpha.x = p1.x; }
+  }
+
+  // --- ELITE UNLOCKED DRONE BETA (Targets Second Lowest Asteroid) ---
+  if (cheatActive) {
+    if (aiBeta.alive) {
+      // Targets the second lowest element so drones don't double-track the exact same rock!
+      let targetBeta = sortedAsteroids[1] || sortedAsteroids[0] || null;
+
+      if (targetBeta) {
+        let targetCenterX = targetBeta.x + (targetBeta.size / 2);
+        let aiCenterX = aiBeta.x + (aiBeta.w / 2);
+
+        if (aiCenterX < targetCenterX - 4) aiBeta.x += aiBeta.speed;
+        else if (aiCenterX > targetCenterX + 4) aiBeta.x -= aiBeta.speed;
+
+        if (aiBeta.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 40) {
+          lasers.push({ x: aiBeta.x + 11, y: aiBeta.y, color: '#ffea00' }); 
+          aiBeta.cooldown = 16; // Fires slightly faster than standard Alpha drone!
+        }
+      }
+      if (aiBeta.cooldown > 0) aiBeta.cooldown--;
+      if (aiBeta.x < 0) aiBeta.x = 0; if (aiBeta.x > 574) aiBeta.x = 574;
+
+      // Render Elite Solid Golden Interceptor Hull Model
+      ctx.fillStyle = '#ffea00'; 
+      ctx.beginPath();
+      ctx.moveTo(aiBeta.x + 13, aiBeta.y);
+      ctx.lineTo(aiBeta.x + 26, aiBeta.y + aiBeta.h);
+      ctx.lineTo(aiBeta.x, aiBeta.y + aiBeta.h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(aiBeta.x + 11, aiBeta.y + 12, 4, 6);
+    } else {
+      aiBeta.respawnTimer--;
+      if (aiBeta.respawnTimer <= 0) { aiBeta.alive = true; aiBeta.x = p1.x; }
     }
   }
 
   // --- ASTEROIDS SPAWNER ---
-  if (frame % Math.max(15, 40 - Math.floor(score / 60)) === 0) { 
+  let spawnRate = Math.max(8, 24 - Math.floor(score / 90));
+  if (frame % spawnRate === 0) { 
     asteroids.push({ 
-      x: Math.random() * 290, 
-      y: -20, 
-      size: Math.random() * 15 + 15, 
-      speed: Math.random() * 2 + 1.8 + (score / 350)
+      x: Math.random() * 560, y: -30, 
+      size: Math.random() * 20 + 20, speed: Math.random() * 2.2 + 2 + (score / 450)
     }); 
   } 
 
   // --- LASERS ENGINE LOOP ---
   for (let i = lasers.length - 1; i >= 0; i--) { 
-    let l = lasers[i]; 
-    l.y -= 7.5; 
-
-    ctx.fillStyle = l.color;
-    ctx.fillRect(l.x, l.y, 4, 10); 
+    let l = lasers[i]; l.y -= 9; 
+    ctx.fillStyle = l.color; ctx.fillRect(l.x, l.y, 4, 12); 
 
     for (let j = asteroids.length - 1; j >= 0; j--) { 
       let a = asteroids[j]; 
-      if (l.x < a.x + a.size && l.x + 4 > a.x && l.y < a.y + a.size && l.y + 10 > a.y) { 
-        lasers.splice(i, 1); 
-        asteroids.splice(j, 1); 
-        score += 10; 
-        break; 
+      if (l.x < a.x + a.size && l.x + 4 > a.x && l.y < a.y + a.size && l.y + 12 > a.y) { 
+        lasers.splice(i, 1); asteroids.splice(j, 1); 
+        score += 10; break; 
       } 
     } 
     if (l && l.y < -20) lasers.splice(i, 1); 
   } 
 
-  // --- ASTEROIDS COLLISION TESTING ---
-  for (let b = asteroids.length - 1; b >= 0; b--) { 
-    let ast = asteroids[b]; 
-    ast.y += ast.speed; 
-
-    ctx.fillStyle = '#ff9900'; 
-    ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
-
-    // Player Check (If player dies, mission ends immediately)
-    if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { 
-      p1.alive = false;
-      isOver = true; 
-      continue; 
-    } 
-
-    // AI Companion Check (Triggers 30 second offline rebuild sequence)
-    if (ai.alive && ai.x < ast.x + ast.size && ai.x + ai.w > ast.x && ai.y < ast.y + ast.size && ai.y + ai.h > ast.y) { 
-      ai.alive = false;
-      ai.respawnTimer = 1800; // 30 seconds at 60 FPS
-      asteroids.splice(b, 1);
-      continue; 
-    } 
-
-    if (ast.y > 420) asteroids.splice(b, 1); 
-  } 
-
-  updateHUD(); 
-
-  requestAnimationFrame(loop); 
-} 
-
-loop(); 
-</script>
