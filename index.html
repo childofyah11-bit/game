@@ -1,49 +1,36 @@
 <style> 
-  #game-box { text-align: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #040407; color: #00ffcc; padding: 20px; border-radius: 12px; max-width: 360px; margin: 0 auto; } 
-  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; box-shadow: 0 0 20px rgba(255, 64, 129, 0.3); outline: none; display: block; margin: 0 auto; } 
-  .ui-text { font-size: 14px; font-weight: bold; margin-bottom: 8px; text-shadow: 0 0 5px rgba(0, 255, 204, 0.5); }
+  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; } 
+  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; } 
 </style> 
 
 <div id="game-box"> 
-  <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! --> 
-  <h1 id="cheat-btn" style="cursor: pointer; font-size: 24px; margin: 0 0 10px 0; user-select: none; transition: 0.2s;">🌌 Dodger game</h1> 
-  
-  <div style="display: flex; justify-content: space-between; padding: 0 5px;">
-    <div id="score" class="ui-text">SCORE: 0</div> 
-    <div id="revive-status" class="ui-text" style="color: #ff00ff; text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);">REVIVES: 0</div> 
-  </div>
-
+  <!-- THE CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! --> 
+  <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1> 
+  <div id="score" style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">SCORE: 0</div> 
   <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
-  
-  <p style="color: #666; font-size: 11px; margin-top: 8px; line-height: 1.4;">
-    [Arrows to Move | Space to Shoot | UP Arrow for Shield]<br>
-    <span style="color: #ff4081;">Click the title on Game Over to Reset!</span>
-  </p> 
+  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Left/Right Arrows to Move | Space to Shoot]</p> 
 </div> 
 
 <script> 
 const cvs = document.getElementById('canvas'); 
 const ctx = cvs.getContext('2d'); 
 
-// Safe global game states
-let score = 0, isOver = false, frame = 0, blocks = [], lasers = [], crates = [], particles = []; 
-let playerX = 145, clickCount = 0, cheatActive = false; 
-let weaponCooldown = 0, shieldActive = false, shieldAvailable = true, shieldCooldownTimer = 0; 
-let playerHP = 100, maxHP = 100, screenShake = 0;
+// Baseline game variables
+let score = 0;
+let isOver = false;
+let frame = 0;
+let playerX = 145;
 
-// Boss configurations 
-let bossActive = false, bossX = 130, bossDir = 1, bossHP = 5, bossMaxHP = 5; 
-let isSuperBoss = false; 
+// Lists to hold game objects
+let asteroids = []; 
+let lasers = []; 
 
-// Laser configurations 
-let laserColorsList = ['#00ff00', '#ff00ff', '#00ffff', '#ffea00']; 
-let currentLaserColorIndex = 0; 
-let nextHyperBossMilestone = 300; 
+// Cheat tracking variables
+let clickCount = 0;
+let cheatActive = false; 
+let weaponCooldown = 0;
 
-// Buff tracking
-let tripleShotTimer = 0, isApexEvolutionUnlocked = false, reviveReservesCount = 0; 
-
-// Smooth input tracking
+// Input movement tracking
 const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
 
 window.addEventListener('keydown', (e) => { 
@@ -51,25 +38,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; } 
   if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
   if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
-  
-  if (e.key === "ArrowUp") { 
-    e.preventDefault(); 
-    if (shieldAvailable && !isOver) { 
-      shieldActive = true; 
-      shieldAvailable = false; 
-      shieldCooldownTimer = 30; // 30 second visible cooldown countdown
-      
-      setTimeout(() => { shieldActive = false; }, 4000); 
-
-      // Managed precision interval for cooldown ticker
-      let cooldownInterval = setInterval(() => {
-        if (shieldCooldownTimer > 0) shieldCooldownTimer--;
-        else clearInterval(cooldownInterval);
-      }, 1000);
-
-      setTimeout(() => { shieldAvailable = true; }, 30000); 
-    } 
-  } 
 }); 
 
 window.addEventListener('keyup', (e) => { 
@@ -79,181 +47,135 @@ window.addEventListener('keyup', (e) => {
   if (e.key === " ") keys.Space = false; 
 }); 
 
-// Cheat trigger handler
+// EPIC SHIFT + 3-CLICK CHEAT SWITCH 
 document.getElementById('cheat-btn').addEventListener('click', () => { 
   if (keys.Shift) { 
     clickCount++; 
     if (clickCount >= 3) { 
       cheatActive = true; 
-      document.getElementById('cheat-btn').style.color = '#ffea00';
+      document.getElementById('cheat-btn').style.color = '#ffea00'; // Title turns gold when cheat is on
       clickCount = 0; 
-      if (isOver) resetGame(); 
+      if (isOver) resetGame();
     } 
   } else { 
     clickCount = 0; 
-    if (isOver) resetGame(); // Easily allow restarting by clicking title
+    if (isOver) resetGame(); // Click title to restart on Game Over
   } 
 }); 
 
-function updateUI() { 
-  document.getElementById('revive-status').innerText = `REVIVES: ${reviveReservesCount}`; 
+function updateScoreUI() { 
   document.getElementById('score').innerText = `SCORE: ${score}`;
 } 
 
-function spawnParticles(x, y, color, count = 8) {
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x: x, y: y,
-      vx: (Math.random() - 0.5) * 4,
-      vy: (Math.random() - 0.5) * 4,
-      alpha: 1,
-      color: color,
-      size: Math.random() * 3 + 1
-    });
-  }
-}
-
 function resetGame() { 
-  score = 0; isOver = false; frame = 0; 
-  blocks = []; lasers = []; crates = []; particles = [];
-  playerX = 145; playerHP = 100; maxHP = 100;
-  bossActive = false; isSuperBoss = false; 
-  tripleShotTimer = 0; isApexEvolutionUnlocked = false; reviveReservesCount = 0; 
-  nextHyperBossMilestone = 300; shieldAvailable = true; shieldActive = false; shieldCooldownTimer = 0;
-  document.getElementById('cheat-btn').style.color = '#00ffcc';
+  score = 0; 
+  isOver = false; 
+  frame = 0; 
+  playerX = 145; 
+  asteroids = []; 
+  lasers = []; 
   cheatActive = false;
-  updateUI(); 
+  document.getElementById('cheat-btn').style.color = '#00ffcc';
+  updateScoreUI(); 
   loop(); 
 } 
 
 function loop() { 
   if (isOver) { 
-    ctx.fillStyle = 'rgba(4, 4, 7, 0.85)'; 
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; 
     ctx.fillRect(0, 0, 320, 400); 
     ctx.fillStyle = '#ff4081'; 
-    ctx.font = 'bold 22px sans-serif'; 
+    ctx.font = 'bold 20px sans-serif'; 
     ctx.textAlign = 'center'; 
-    ctx.fillText('💥 OVERWHELMED! 💥', 160, 180); 
-    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('💥 GAME OVER 💥', 160, 180); 
+    ctx.font = '13px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`FINAL SCORE: ${score}`, 160, 215);
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#888';
-    ctx.fillText('Click the "Dodger game" Title to Retry', 160, 250);
+    ctx.fillText('Click the Title to Restart', 160, 220);
     return; 
   } 
 
-  // Core background render with dynamic engine screen shaking matrices
+  // Clear screen every frame
   ctx.clearRect(0, 0, 320, 400); 
-  ctx.save();
-  if (screenShake > 0) {
-    let dx = (Math.random() - 0.5) * screenShake;
-    let dy = (Math.random() - 0.5) * screenShake;
-    ctx.translate(dx, dy);
-    screenShake *= 0.9; // Decay shake speed slowly over ticks
-  }
-
   frame++; 
-  currentLaserColorIndex = Math.floor(frame / 300) % laserColorsList.length; 
 
-  // Smooth movement physics
-  if (keys.ArrowLeft && playerX > 0) playerX -= 5.5; 
-  if (keys.ArrowRight && playerX < 294) playerX += 5.5; 
+  // Move Player Ship
+  if (keys.ArrowLeft && playerX > 0) playerX -= 5; 
+  if (keys.ArrowRight && playerX < 294) playerX += 5; 
 
+  // Weapon Cooldown Ticker
   if (weaponCooldown > 0) weaponCooldown--; 
-  if (tripleShotTimer > 0) tripleShotTimer--; 
 
-  // Player Shooting Loop
+  // Shoot Lasers (Cheat drastically cuts down weapon cooldown)
   if (keys.Space && weaponCooldown === 0) { 
-    if (tripleShotTimer > 0) { 
-      lasers.push({ x: playerX + 11, y: 340, w: 4, h: 10, vx: 0 }); 
-      lasers.push({ x: playerX + 5, y: 340, w: 4, h: 10, vx: -1.5 }); 
-      lasers.push({ x: playerX + 17, y: 340, w: 4, h: 10, vx: 1.5 }); 
-      weaponCooldown = cheatActive ? 3 : 11; 
-    } else { 
-      let bSize = cheatActive ? 16 : 4; 
-      lasers.push({ x: playerX + 13 - (bSize / 2), y: 340, w: bSize, h: 10, vx: 0 }); 
-      weaponCooldown = cheatActive ? 3 : 14; 
-    } 
+    lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10 }); 
+    weaponCooldown = cheatActive ? 3 : 15; 
   } 
 
-  // Draw Upgrade Indicators & Text UI overlays directly onto canvas
-  if (shieldCooldownTimer > 0) {
-    ctx.fillStyle = '#ff00ff';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(`SHIELD CD: ${shieldCooldownTimer}s`, 310, 15);
-  } else {
-    ctx.fillStyle = '#00ffcc';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('SHIELD READY [▲]', 310, 15);
-  }
+  // Draw Player Ship (Cyan Triangle)
+  ctx.fillStyle = '#00ffcc'; 
+  ctx.beginPath(); 
+  ctx.moveTo(playerX + 13, 350); 
+  ctx.lineTo(playerX + 26, 375); 
+  ctx.lineTo(playerX, 375); 
+  ctx.closePath(); 
+  ctx.fill(); 
 
-  // Draw Player Ship Model structures
-  if (isApexEvolutionUnlocked) { 
-    ctx.fillStyle = '#df00ff'; ctx.fillRect(playerX, 365, 26, 12); 
-    ctx.fillRect(playerX + 5, 355, 16, 10); 
-    ctx.fillStyle = '#00ffff'; ctx.fillRect(playerX + 11, 359, 4, 6); 
-  } else { 
-    ctx.fillStyle = '#00ffcc'; ctx.beginPath(); 
-    ctx.moveTo(playerX + 13, 350); ctx.lineTo(playerX + 26, 375); ctx.lineTo(playerX, 375); 
-    ctx.closePath(); ctx.fill(); 
-    ctx.fillStyle = '#00bfff'; ctx.fillRect(playerX + 10, 362, 6, 8); 
+  // Spawn Asteroids every 40 frames
+  if (frame % 40 === 0) { 
+    asteroids.push({ 
+      x: Math.random() * 290, 
+      y: -20, 
+      size: Math.random() * 15 + 15, 
+      speed: Math.random() * 2 + 2 
+    }); 
   } 
 
-  // Draw Player Interactive Ship UI HUD Elements
-  ctx.textAlign = "center"; 
-  if (tripleShotTimer > 0) { 
-    ctx.fillStyle = "#ff00ff"; ctx.font = "bold 9px sans-serif"; 
-    ctx.fillText(`TRIPLE SHOT: ${Math.ceil(tripleShotTimer/60)}s`, playerX + 13, 342); 
-  } 
-
-  // Render Ship Shield Bubble Frame
-  if (shieldActive) { 
-    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3; ctx.beginPath(); 
-    ctx.arc(playerX + 13, 364, 22, 0, Math.PI * 2); ctx.stroke(); 
-  } 
-
-  // Draw Player Baseline Structural Health Bar HUD
-  ctx.fillStyle = '#222'; ctx.fillRect(playerX - 2, 382, 30, 4);
-  ctx.fillStyle = playerHP > 30 ? '#00ffcc' : '#ff4081';
-  ctx.fillRect(playerX - 2, 382, (playerHP / maxHP) * 30, 4);
-
-  // Periodic random falling upgrade crate dispatch loops
-  if (frame % 700 === 0) { 
-    let isPurpleBox = (score >= 100 || Math.random() > 0.5); 
-    crates.push({ x: Math.random() * 280 + 10, y: -20, variant: isPurpleBox ? 'purple' : 'blue' }); 
-  } 
-
-  // Upgraded Logic Routine: Process dropping Crates 
-  for (let c = crates.length - 1; c >= 0; c--) { 
-    let crate = crates[c]; crate.y += 2.0; 
-    ctx.font = "18px sans-serif"; 
-    ctx.fillText(crate.variant === 'purple' ? "💠" : "📦", crate.x, crate.y); 
-
-    if (playerX < crate.x + 15 && playerX + 26 > crate.x - 15 && 350 < crate.y && 380 > crate.y) { 
-      spawnParticles(crate.x, crate.y, crate.variant === 'purple' ? '#df00ff' : '#00bfff', 12);
-      if (crate.variant === 'purple') { 
-        isApexEvolutionUnlocked = true; reviveReservesCount++; playerHP = Math.min(maxHP, playerHP + 30);
-      } else { 
-        tripleShotTimer = 400; 
-      } 
-      crates.splice(c, 1); updateUI(); continue; 
-    } 
-    if (crate.y > 420) crates.splice(c, 1); 
-  } 
-
-  // Upgraded Logic Routine: Process Active Player Lasers 
+  // Process Lasers Physics
   for (let i = lasers.length - 1; i >= 0; i--) { 
-    let l = lasers[i]; l.y -= 8.5; if (l.vx) l.x += l.vx; 
-    let activeLaserColor = laserColorsList[currentLaserColorIndex];
-    ctx.fillStyle = activeLaserColor; ctx.fillRect(l.x, l.y, l.w, l.h); 
+    let l = lasers[i]; 
+    l.y -= 7; // Lasers fly up
 
-    let bossWidth = isSuperBoss ? 70 : 40; 
-    if (bossActive && l.y > 30 && l.y < 75 && l.x + l.w > bossX && l.x < bossX + bossWidth) { 
-      spawnParticles(l.x, l.y, '#ffffff', 4);
-      lasers.splice(i, 1); bossHP--; 
-      if (bossHP <= 0) { 
-        spawnParticles(bossX + (bossWidth/2), 50, '#ff4081', 25);
-        screenShake = 15; bossActive = false; 
+    // Draw Laser (Green lines)
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(l.x, l.y, l.w, l.h); 
+
+    // Check laser hit on Asteroids
+    for (let j = asteroids.length - 1; j >= 0; j--) { 
+      let a = asteroids[j]; 
+      if (l.x < a.x + a.size && l.x + l.w > a.x && l.y < a.y + a.size && l.y + l.h > a.y) { 
+        lasers.splice(i, 1); 
+        asteroids.splice(j, 1); 
+        score += 10; 
+        updateScoreUI(); 
+        break; 
+      } 
+    } 
+    // Clear old off-screen lasers
+    if (l && l.y < -20) lasers.splice(i, 1); 
+  } 
+
+  // Process Asteroids Physics
+  for (let b = asteroids.length - 1; b >= 0; b--) { 
+    let ast = asteroids[b]; 
+    ast.y += ast.speed; // Asteroids fall down
+
+    // Draw Asteroid (Orange squares)
+    ctx.fillStyle = '#ff9900'; 
+    ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
+
+    // Check Asteroid crashing into Player Ship
+    if (playerX < ast.x + ast.size && playerX + 26 > ast.x && 350 < ast.y + ast.size && 375 > ast.y) { 
+      isOver = true; 
+      continue; 
+    } 
+
+    // Clear old off-screen asteroids
+    if (ast.y > 420) asteroids.splice(b, 1); 
+  } 
+
+  requestAnimationFrame(loop); 
+} 
+
+// Start the game loop
+loop(); 
+</script>
