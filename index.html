@@ -8,20 +8,19 @@
 </style> 
 
 <div id="game-box"> 
-  <!-- THE SECURED CHEAT: Hold SHIFT and click this title 3 times to deploy your Elite Golden Backup Bot! --> 
+  <!-- THE SECURED SECRET: Hold SHIFT and click this title 3 times to deploy your hidden Elite Golden Backup Bot! --> 
   <h1 id="cheat-btn" style="cursor: pointer; font-size: 26px; margin: 0 0 10px 0; user-select: none;">🌌 Dodger game</h1> 
   
   <div class="hud-container">
     <div id="p1-status" class="p1-hud">PLAYER: ALIVE</div>
     <div id="score" class="score-hud">SCORE: 0</div> 
-    <div id="ai-status" class="ai-hud">AI SQUAD: ONLINE</div>
+    <div id="ai-status" class="ai-hud">AI DRONE: ONLINE</div>
   </div>
 
   <canvas id="canvas" width="600" height="600" tabindex="1"></canvas> 
   
-  <p style="color: #888; font-size: 13px; margin-top: 8px; line-height: 1.4;">
-    [Left / Right Arrows to Move | Space to Shoot]<br>
-    <span style="color: #ffea00; font-weight: bold;" id="cheat-hint">Hold SHIFT and click the title 3 times to unlock secret reinforcements!</span>
+  <p style="color: #444; font-size: 12px; margin-top: 8px; line-height: 1.4;">
+    [Left / Right Arrows to Move | Space to Shoot]
   </p> 
 </div> 
 
@@ -49,7 +48,7 @@ let aiAlpha = {
 // SECRET CHEAT DRONE: AI Drone Beta (Golden Bot - Elite Backup)
 let aiBeta = {
   x: 420, y: 540, w: 26, h: 25,
-  alive: false, cooldown: 0, respawnTimer: 0, speed: 5.0 // Moves slightly faster than Alpha!
+  alive: false, cooldown: 0, respawnTimer: 0, speed: 5.0
 };
 
 const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
@@ -68,19 +67,19 @@ window.addEventListener('keyup', (e) => {
   if (e.key === " ") keys.Space = false; 
 }); 
 
-// EXCLUSIVE CHEAT INTERFACE ENGINE ROUTER
+// SECURED EXCLUSIVE CHEAT INTERFACE ENGINE ROUTER
 document.getElementById('cheat-btn').addEventListener('click', () => { 
   if (keys.Shift) { 
     clickCount++; 
     if (clickCount >= 3) { 
       cheatActive = true; 
+      // Subtle cue: title color changes just slightly so you know it worked, but won't tip off others
       document.getElementById('cheat-btn').style.color = '#ffea00'; 
-      document.getElementById('cheat-hint').innerText = "🏆 ELITE GOLDEN AI BOT DEPLOYED TO YOUR WING!";
-      document.getElementById('cheat-hint').style.color = '#ffea00';
       
-      // Instantly inject the hidden Golden Bot into active state configuration matrices
+      // Instantly inject the hidden Golden Bot into action
       aiBeta.alive = true;
       aiBeta.x = p1.x + 40;
+      aiBeta.respawnTimer = 0;
       
       clickCount = 0; 
       if (isOver) resetGame();
@@ -98,7 +97,7 @@ function updateHUD() {
   document.getElementById('p1-status').innerText = pStatus;
   document.getElementById('p1-status').style.color = p1.alive ? "#00ffcc" : "#ff4081";
 
-  // Manage custom squad text loops
+  // Manage custom squad text loops stealthily
   let activeSquadCount = (aiAlpha.alive ? 1 : 0) + (aiBeta.alive ? 1 : 0);
   if (cheatActive) {
     document.getElementById('ai-status').innerText = `AI SQUAD: ${activeSquadCount}/2`;
@@ -118,14 +117,12 @@ function resetGame() {
   score = 0; isOver = false; frame = 0; asteroids = []; lasers = []; 
   cheatActive = false; 
   document.getElementById('cheat-btn').style.color = '#00ffcc';
-  document.getElementById('cheat-hint').innerText = "Hold SHIFT and click the title 3 times to unlock secret reinforcements!";
-  document.getElementById('cheat-hint').style.color = '#ffea00';
 
   p1.x = 285; p1.alive = true; p1.cooldown = 0;
 
   aiAlpha.x = 150; aiAlpha.alive = true; aiAlpha.cooldown = 0; aiAlpha.respawnTimer = 0;
   
-  // Re-lock the golden backup bot upon baseline system wipes
+  // Re-lock the golden backup bot upon game reset
   aiBeta.alive = false; aiBeta.cooldown = 0; aiBeta.respawnTimer = 0;
 
   updateHUD(); loop(); 
@@ -143,10 +140,10 @@ function loop() {
   ctx.clearRect(0, 0, 600, 600); 
   frame++; 
 
-  // Sort current asteroids list array by lowest altitude to assist AI target logic
+  // Fixed targeting math array filtering out undefined tracking nodes
   let sortedAsteroids = [...asteroids].sort((itemA, itemB) => itemB.y - itemA.y);
 
-  // --- PLAYER MOVEMENT CONTROL MATRIX ---
+  // --- PLAYER MOVEMENT CONTROL ---
   if (p1.alive) {
     if (keys.ArrowLeft && p1.x > 0) p1.x -= 6; 
     if (keys.ArrowRight && p1.x < 574) p1.x += 6; 
@@ -164,7 +161,7 @@ function loop() {
 
   // --- AUTOMATED AI DRONE ALPHA (Targets Lowest Asteroid) ---
   if (aiAlpha.alive) {
-    let targetAlpha = sortedAsteroids[0] || null; // Select absolute closest drop target
+    let targetAlpha = sortedAsteroids.length > 0 ? sortedAsteroids[0] : null;
 
     if (targetAlpha) {
       let targetCenterX = targetAlpha.x + (targetAlpha.size / 2);
@@ -193,8 +190,8 @@ function loop() {
   // --- ELITE UNLOCKED DRONE BETA (Targets Second Lowest Asteroid) ---
   if (cheatActive) {
     if (aiBeta.alive) {
-      // Targets the second lowest element so drones don't double-track the exact same rock!
-      let targetBeta = sortedAsteroids[1] || sortedAsteroids[0] || null;
+      // Logic safety check: If there's only 1 asteroid, target that one. If more, take the 2nd lowest.
+      let targetBeta = sortedAsteroids.length > 1 ? sortedAsteroids[1] : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null);
 
       if (targetBeta) {
         let targetCenterX = targetBeta.x + (targetBeta.size / 2);
@@ -205,7 +202,7 @@ function loop() {
 
         if (aiBeta.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 40) {
           lasers.push({ x: aiBeta.x + 11, y: aiBeta.y, color: '#ffea00' }); 
-          aiBeta.cooldown = 16; // Fires slightly faster than standard Alpha drone!
+          aiBeta.cooldown = 16; 
         }
       }
       if (aiBeta.cooldown > 0) aiBeta.cooldown--;
@@ -249,4 +246,15 @@ function loop() {
     } 
     if (l && l.y < -20) lasers.splice(i, 1); 
   } 
+
+  // --- ASTEROIDS PHYSICS & HITBOX CRASH ROUTINES ---
+  for (let b = asteroids.length - 1; b >= 0; b--) { 
+    let ast = asteroids[b]; ast.y += ast.speed; 
+
+    ctx.fillStyle = '#ff9900'; ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
+
+    // Player collision test check
+    if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { 
+      p1.alive = false; isOver = true; continue; 
+    } 
 
