@@ -1,50 +1,73 @@
 <style> 
-  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; transition: background 0.3s; } 
-  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; transition: border-color 0.3s, box-shadow 0.3s; } 
+  #game-box { text-align: center; font-family: sans-serif; background: #040407; color: #00ffcc; padding: 15px; } 
+  canvas { background: #0d0d1a; border: 2px solid #ff4081; border-radius: 8px; outline: none; } 
+  .hud-container { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+  .p1-hud { color: #00ffcc; font-size: 14px; text-align: left; }
+  .p2-hud { color: #ff00ff; font-size: 14px; text-align: right; }
+  .score-hud { color: #ffff00; font-size: 16px; width: 100%; text-align: center; position: absolute; }
 </style> 
 
-<div id="game-box"> 
-  <!-- THE CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire! --> 
+<div id="game-box" style="position: relative;"> 
+  <!-- THE CHEAT: Hold SHIFT and click this title 3 times to unlock rapid fire for BOTH ships! --> 
   <h1 id="cheat-btn" style="cursor: pointer; font-size: 22px; margin: 0 0 5px 0; user-select: none;">🌌 Dodger game</h1> 
-  <div id="score" style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">SCORE: 0</div> 
-  <div id="buff-hud" style="font-size: 12px; color: #ff00ff; height: 15px; margin-bottom: 5px;"></div>
+  
+  <div class="hud-container">
+    <div id="p1-status" class="p1-hud">P1: ALIVE</div>
+    <div id="score" class="score-hud">SCORE: 0</div> 
+    <div id="p2-status" class="p2-hud">P2: ALIVE</div>
+  </div>
+
   <canvas id="canvas" width="320" height="400" tabindex="1"></canvas> 
-  <p style="color: #888; font-size: 11px; margin-top: 5px;">[Left/Right to Move | Space to Shoot | <b>Press 1 - 9 to Swap Themes Live!</b>]</p> 
+  
+  <p style="color: #888; font-size: 11px; margin-top: 5px; line-height: 1.4;">
+    <b>Player 1:</b> Left / Right Arrows to Move | Space to Shoot<br>
+    <b>Player 2:</b> A / D to Move | W to Shoot<br>
+    <span style="color: #ff4081;">If one dies, survive 30 seconds to respawn them!</span>
+  </p> 
 </div> 
 
 <script> 
 const cvs = document.getElementById('canvas'); 
 const ctx = cvs.getContext('2d'); 
 
-// Theme Engine State Matrix
-const themes = {
-  '1': { name: "Retro Neon Cyber", bg: "#0d0d1a", boxBg: "#040407", border: "#ff4081", asteroid: "#ff9900", text: "#00ffcc" },
-  '2': { name: "Volcanic Core",    bg: "#1a0805", boxBg: "#0d0302", border: "#ff3300", asteroid: "#ffaa00", text: "#ffcc00" },
-  '3': { name: "Forest Matrix",    bg: "#05140b", boxBg: "#020a05", border: "#00ff66", asteroid: "#88cc44", text: "#a3ffa3" },
-  '4': { name: "Frozen Tundra",    bg: "#0a192f", boxBg: "#030d1a", border: "#00ffff", asteroid: "#b3f0ff", text: "#e6faff" },
-  '5': { name: "Deep Void Space",  bg: "#000000", boxBg: "#050505", border: "#ffffff", asteroid: "#444444", text: "#ffffff" },
-  '6': { name: "Hacker Terminal",  bg: "#001100", boxBg: "#000500", border: "#00ff00", asteroid: "#33aa33", text: "#33ff33" },
-  '7': { name: "Synthwave Sunset", bg: "#2b003a", boxBg: "#14001c", border: "#ff007f", asteroid: "#ffff00", text: "#00ffff" },
-  '8': { name: "Royal Empire",     bg: "#100b26", boxBg: "#070412", border: "#ffd700", asteroid: "#c0c0c0", text: "#e6ccff" },
-  '9': { name: "Candy Nebula",     bg: "#261420", boxBg: "#12080f", border: "#ff99bb", asteroid: "#ffccff", text: "#99ffff" }
+// Global state variables
+let score = 0;
+let isOver = false;
+let frame = 0;
+let asteroids = []; 
+let lasers = []; 
+
+// Cheat variables
+let clickCount = 0;
+let cheatActive = false;
+
+// Player 1 Configuration (Cyan Delta Wing)
+let p1 = {
+  x: 90,
+  y: 350,
+  w: 26,
+  h: 25,
+  alive: true,
+  cooldown: 0,
+  respawnTimer: 0
 };
-let currentTheme = themes['1'];
 
-// Game baseline configurations
-let score = 0, isOver = false, frame = 0, playerX = 145;
-let asteroids = [], lasers = [], upgrades = []; 
+// Player 2 Configuration (Magenta Square Support Cruiser)
+let p2 = {
+  x: 200,
+  y: 350,
+  w: 26,
+  h: 25,
+  alive: true,
+  cooldown: 0,
+  respawnTimer: 0
+};
 
-// Cheat modifiers
-let clickCount = 0, cheatActive = false, weaponCooldown = 0;
-
-// Dynamic Modded Systems (Procedural combinations create 300+ variance builds)
-let laserType = 'standard';     // 'standard', 'double', 'triple', 'spread', 'heavy'
-let laserColor = '#00ff00';     // Changes dynamically across multiple spectral hex codes
-let playerSpeed = 5;            // Can scale up with engine drops
-let shieldStock = 0;            // Absorbs asteroid collisions
-let buffTimer = 0;              // Countdown ticker for modular upgrades
-
-const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
+// Input state dictionary
+const keys = { 
+  ArrowLeft: false, ArrowRight: false, Space: false, Shift: false,
+  KeyA: false, KeyD: false, KeyW: false 
+}; 
 
 window.addEventListener('keydown', (e) => { 
   if (e.key === "Shift") keys.Shift = true; 
@@ -52,11 +75,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
   if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
   
-  // Theme selection engine listening router
-  if (themes[e.key]) {
-    currentTheme = themes[e.key];
-    applyLiveThemeStyling();
-  }
+  // Player 2 Controls mapped explicitly via code standard configurations
+  if (e.code === "KeyA") keys.KeyA = true;
+  if (e.code === "KeyD") keys.KeyD = true;
+  if (e.code === "KeyW") keys.KeyW = true;
 }); 
 
 window.addEventListener('keyup', (e) => { 
@@ -64,15 +86,11 @@ window.addEventListener('keyup', (e) => {
   if (e.key === "ArrowLeft") keys.ArrowLeft = false; 
   if (e.key === "ArrowRight") keys.ArrowRight = false; 
   if (e.key === " ") keys.Space = false; 
+  
+  if (e.code === "KeyA") keys.KeyA = false;
+  if (e.code === "KeyD") keys.KeyD = false;
+  if (e.code === "KeyW") keys.KeyW = false;
 }); 
-
-function applyLiveThemeStyling() {
-  document.getElementById('game-box').style.background = currentTheme.boxBg;
-  document.getElementById('game-box').style.color = currentTheme.text;
-  cvs.style.background = currentTheme.bg;
-  cvs.style.borderColor = currentTheme.border;
-  cvs.style.boxShadow = `0 0 20px ${currentTheme.border}44`;
-}
 
 // EPIC SHIFT + 3-CLICK CHEAT SWITCH 
 document.getElementById('cheat-btn').addEventListener('click', () => { 
@@ -90,151 +108,194 @@ document.getElementById('cheat-btn').addEventListener('click', () => {
   } 
 }); 
 
-function updateUI() { 
+function updateHUD() { 
   document.getElementById('score').innerText = `SCORE: ${score}`;
-  let hudText = `Style: ${currentTheme.name} | `;
-  if (shieldStock > 0) hudText += `🛡️ SHIELDS: ${shieldStock}  `;
-  if (buffTimer > 0) hudText += `⚡ UPGRADE: ${Math.ceil(buffTimer/60)}s`;
-  document.getElementById('buff-hud').innerText = hudText;
+  
+  // Manage Player 1 HUD text readout
+  if (p1.alive) {
+    document.getElementById('p1-status').innerText = "P1: ALIVE";
+    document.getElementById('p1-status').style.color = "#00ffcc";
+  } else {
+    document.getElementById('p1-status').innerText = `P1: DEAD (${Math.ceil(p1.respawnTimer / 60)}s)`;
+    document.getElementById('p1-status').style.color = "#ff4081";
+  }
+
+  // Manage Player 2 HUD text readout
+  if (p2.alive) {
+    document.getElementById('p2-status').innerText = "P2: ALIVE";
+    document.getElementById('p2-status').style.color = "#ff00ff";
+  } else {
+    document.getElementById('p2-status').innerText = `P2: DEAD (${Math.ceil(p2.respawnTimer / 60)}s)`;
+    document.getElementById('p2-status').style.color = "#ff4081";
+  }
 } 
 
-// Procedural upgrade generator engine
-function spawnProceduralUpgrade(x, y) {
-  const laserPool = ['double', 'triple', 'spread', 'heavy'];
-  const colorsPool = ['#ff00ff', '#00ffff', '#ffff00', '#ff3300', '#9933ff', '#00ffaa'];
-  
-  upgrades.push({
-    x: x,
-    y: y,
-    vy: 1.5,
-    type: Math.random() > 0.4 ? 'weapon' : 'utility',
-    wType: laserPool[Math.floor(Math.random() * laserPool.length)],
-    color: colorsPool[Math.floor(Math.random() * colorsPool.length)],
-    label: Math.random() > 0.5 ? '⚡' : '🔋'
-  });
-}
-
 function resetGame() { 
-  score = 0; isOver = false; frame = 0; playerX = 145; 
-  asteroids = []; lasers = []; upgrades = []; 
-  laserType = 'standard'; laserColor = '#00ff00'; playerSpeed = 5; shieldStock = 0; buffTimer = 0;
-  cheatActive = false; document.getElementById('cheat-btn').style.color = currentTheme.text;
-  updateUI(); loop(); 
+  score = 0; 
+  isOver = false; 
+  frame = 0; 
+  asteroids = []; 
+  lasers = []; 
+  cheatActive = false;
+  document.getElementById('cheat-btn').style.color = '#00ffcc';
+
+  // Re-initialize Player 1 states
+  p1.x = 90;
+  p1.alive = true;
+  p1.cooldown = 0;
+  p1.respawnTimer = 0;
+
+  // Re-initialize Player 2 states
+  p2.x = 200;
+  p2.alive = true;
+  p2.cooldown = 0;
+  p2.respawnTimer = 0;
+
+  updateHUD(); 
+  loop(); 
 } 
 
 function loop() { 
   if (isOver) { 
-    ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, 320, 400); 
-    ctx.fillStyle = currentTheme.border; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; 
-    ctx.fillText('💥 GAME OVER 💥', 160, 180); 
-    ctx.font = '13px sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('Click the Title to Restart', 160, 220);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; 
+    ctx.fillRect(0, 0, 320, 400); 
+    ctx.fillStyle = '#ff4081'; 
+    ctx.font = 'bold 20px sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.fillText('💥 BOTH SHIPS CRASHED 💥', 160, 180); 
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Click the Title to Restart', 160, 220);
     return; 
   } 
 
   ctx.clearRect(0, 0, 320, 400); 
   frame++; 
 
-  if (buffTimer > 0) {
-    buffTimer--;
-    if (buffTimer <= 0) {
-      laserType = 'standard';
-      laserColor = '#00ff00';
-      playerSpeed = 5;
+  // --- PLAYER 1 ENGINE (Arrow Keys) ---
+  if (p1.alive) {
+    if (keys.ArrowLeft && p1.x > 0) p1.x -= 4.5; 
+    if (keys.ArrowRight && p1.x < 294) p1.x += 4.5; 
+    if (p1.cooldown > 0) p1.cooldown--; 
+
+    if (keys.Space && p1.cooldown === 0) { 
+      lasers.push({ x: p1.x + 11, y: p1.y, color: '#00ffcc' }); 
+      p1.cooldown = cheatActive ? 3 : 15; 
+    } 
+
+    // Draw Player 1 Triangle Fighter (Cyan Jet)
+    ctx.fillStyle = '#00ffcc'; 
+    ctx.beginPath(); 
+    ctx.moveTo(p1.x + 13, p1.y); 
+    ctx.lineTo(p1.x + 26, p1.y + p1.h); 
+    ctx.lineTo(p1.x, p1.y + p1.h); 
+    ctx.closePath(); 
+    ctx.fill(); 
+  } else {
+    // Process Respawn Logic Countdowns
+    p1.respawnTimer--;
+    if (p1.respawnTimer <= 0) {
+      p1.alive = true;
+      p1.x = 145; // Respawn safely in middle
     }
   }
 
-  // Active Ship translation updates
-  if (keys.ArrowLeft && playerX > 0) playerX -= playerSpeed; 
-  if (keys.ArrowRight && playerX < 294) playerX += playerSpeed; 
+  // --- PLAYER 2 ENGINE (A / D / W Keys) ---
+  if (p2.alive) {
+    if (keys.KeyA && p2.x > 0) p2.x -= 4.5; 
+    if (keys.KeyD && p2.x < 294) p2.x += 4.5; 
+    if (p2.cooldown > 0) p2.cooldown--; 
 
-  if (weaponCooldown > 0) weaponCooldown--; 
+    if (keys.KeyW && p2.cooldown === 0) { 
+      // Support ship shoots wider defensive projectiles
+      lasers.push({ x: p2.x + 11, y: p2.y, color: '#ff00ff' }); 
+      p2.cooldown = cheatActive ? 3 : 15; 
+    } 
 
-  // Weapon core execution loops
-  if (keys.Space && weaponCooldown === 0) { 
-    let baseCooldown = cheatActive ? 3 : 16;
-    
-    if (laserType === 'standard') {
-      lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: 0, vy: -7 });
-    } else if (laserType === 'double') {
-      lasers.push({ x: playerX + 4, y: 350, w: 4, h: 10, vx: 0, vy: -7 });
-      lasers.push({ x: playerX + 18, y: 350, w: 4, h: 10, vx: 0, vy: -7 });
-    } else if (laserType === 'triple') {
-      lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: 0, vy: -7 });
-      lasers.push({ x: playerX + 2, y: 352, w: 4, h: 10, vx: -0.5, vy: -7 });
-      lasers.push({ x: playerX + 20, y: 352, w: 4, h: 10, vx: 0.5, vy: -7 });
-    } else if (laserType === 'spread') {
-      lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: 0, vy: -7 });
-      lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: -2, vy: -6 });
-      lasers.push({ x: playerX + 11, y: 350, w: 4, h: 10, vx: 2, vy: -6 });
-    } else if (laserType === 'heavy') {
-      lasers.push({ x: playerX + 8, y: 345, w: 10, h: 14, vx: 0, vy: -5 });
-      baseCooldown += 6;
+    // Draw Player 2 Block Support Cruiser (Magenta Armor Ship)
+    ctx.fillStyle = '#ff00ff'; 
+    ctx.fillRect(p2.x, p2.y + 8, p2.w, p2.h - 8);
+    ctx.fillRect(p2.x + 8, p2.y, 10, 8); // Top gun node tower
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(p2.x + 4, p2.y + 12, 4, 4); // Cool cockpit lights
+    ctx.fillRect(p2.x + 18, p2.y + 12, 4, 4);
+  } else {
+    p2.respawnTimer--;
+    if (p2.respawnTimer <= 0) {
+      p2.alive = true;
+      p2.x = 145;
     }
-    weaponCooldown = cheatActive ? 3 : baseCooldown; 
-  } 
-
-  // Player Vector Design (Colors dynamically pull structural styling fields)
-  ctx.fillStyle = currentTheme.border; ctx.beginPath(); 
-  ctx.moveTo(playerX + 13, 350); ctx.lineTo(playerX + 26, 375); ctx.lineTo(playerX, 375); 
-  ctx.closePath(); ctx.fill(); 
-
-  // Shield Bubble Visualizer Overlay
-  if (shieldStock > 0) {
-    ctx.strokeStyle = currentTheme.text; ctx.lineWidth = 2; ctx.beginPath();
-    ctx.arc(playerX + 13, 363, 20, 0, Math.PI * 2); ctx.stroke();
   }
 
-  // Asteroid spawn management loop
-  if (frame % Math.max(12, 40 - Math.floor(score/60)) === 0) { 
+  // Double Defeat Game State Safety Check
+  if (!p1.alive && !p2.alive) {
+    isOver = true;
+  }
+
+  // --- HARM OBJECTS SPAWNER (Asteroids) ---
+  // Speed escalates progressively alongside current total game scores
+  if (frame % Math.max(15, 40 - Math.floor(score / 50)) === 0) { 
     asteroids.push({ 
-      x: Math.random() * 290, y: -20, 
-      size: Math.random() * 15 + 15, speed: Math.random() * 2 + 2 + (score/250)
+      x: Math.random() * 290, 
+      y: -20, 
+      size: Math.random() * 15 + 15, 
+      speed: Math.random() * 2 + 1.8 + (score / 300)
     }); 
   } 
 
-  // Process drop placements and upgrades pickup items
-  for (let u = upgrades.length - 1; u >= 0; u--) {
-    let upg = upgrades[u];
-    upg.y += upg.vy;
-    
-    ctx.fillStyle = upg.color;
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(upg.label, upg.x, upg.y);
-
-    if (playerX < upg.x + 10 && playerX + 26 > upg.x - 10 && 350 < upg.y && 385 > upg.y) {
-      buffTimer = 480; 
-      if (upg.type === 'weapon') {
-        laserType = upg.wType;
-        laserColor = upg.color;
-      } else {
-        if (Math.random() > 0.5) {
-          shieldStock++;
-        } else {
-          playerSpeed = 8; 
-        }
-      }
-      upgrades.splice(u, 1);
-      updateUI();
-      continue;
-    }
-    if (upg.y > 420) upgrades.splice(u, 1);
-  }
-
-  // Process Projectiles (Lasers Engine Loop)
+  // --- LASERS ENGINE LOOP ---
   for (let i = lasers.length - 1; i >= 0; i--) { 
-    let l = lasers[i]; l.y += l.vy; if (l.vx) l.x += l.vx;
+    let l = lasers[i]; 
+    l.y -= 7.5; 
 
-    // Use current upgrade color, or default to theme colors if standard weapon running
-    ctx.fillStyle = (laserType === 'standard') ? currentTheme.text : laserColor; 
-    ctx.fillRect(l.x, l.y, l.w, l.h); 
+    ctx.fillStyle = l.color;
+    ctx.fillRect(l.x, l.y, 4, 10); 
 
     for (let j = asteroids.length - 1; j >= 0; j--) { 
       let a = asteroids[j]; 
-      if (l.x < a.x + a.size && l.x + l.w > a.x && l.y < a.y + a.size && l.y + l.h > a.y) { 
-        if (Math.random() < 0.15) {
-          spawnProceduralUpgrade(a.x + a.size/2, a.y + a.size/2);
-        }
-        lasers.splice(i, 1); asteroids.splice(j, 1); 
-        score += 10; updateUI(); break; 
+      if (l.x < a.x + a.size && l.x + 4 > a.x && l.y < a.y + a.size && l.y + 10 > a.y) { 
+        lasers.splice(i, 1); 
+        asteroids.splice(j, 1); 
+        score += 10; 
+        break; 
       } 
+    } 
+    if (l && l.y < -20) lasers.splice(i, 1); 
+  } 
+
+  // --- ASTEROIDS PHYSICS MATRIX ENGINE ---
+  for (let b = asteroids.length - 1; b >= 0; b--) { 
+    let ast = asteroids[b]; 
+    ast.y += ast.speed; 
+
+    ctx.fillStyle = '#ff9900'; 
+    ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
+
+    // Handle Player 1 Collision Boundary Tests
+    if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { 
+      p1.alive = false;
+      p1.respawnTimer = 1800; // 1800 frames = exactly 30 seconds at 60 FPS
+      asteroids.splice(b, 1);
+      continue; 
+    } 
+
+    // Handle Player 2 Collision Boundary Tests
+    if (p2.alive && p2.x < ast.x + ast.size && p2.x + p2.w > ast.x && p2.y < ast.y + ast.size && p2.y + p2.h > ast.y) { 
+      p2.alive = false;
+      p2.respawnTimer = 1800; 
+      asteroids.splice(b, 1);
+      continue; 
+    } 
+
+    if (ast.y > 420) asteroids.splice(b, 1); 
+  } 
+
+  // Track ticking data output onto UI elements live
+  updateHUD(); 
+
+  requestAnimationFrame(loop); 
+} 
+
+// Start initialization routines
+loop(); 
+</script>
