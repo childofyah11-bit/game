@@ -46,7 +46,7 @@ let aiBeta = { x: 420, y: 540, w: 26, h: 25, alive: false, cooldown: 0, respawnT
 
 // Boss System Configuration
 let activeBoss = null;
-let bossCounter = 0; // Tracks which boss spawn milestone we are at
+let bossCounter = 0; 
 
 const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
 
@@ -192,10 +192,9 @@ function loop() {
         if (aiCenterX < targetCenterX - 4) aiBeta.x += aiBeta.speed; 
         else if (aiCenterX > targetCenterX + 4) aiBeta.x -= aiBeta.speed; 
         if (aiBeta.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 80) { 
-          // NEW CHEATER PERK: Fires two destructive separate lines instantly
           lasers.push({ x: aiBeta.x, y: aiBeta.y, color: '#ffea00', fromPlayer: true }); 
           lasers.push({ x: aiBeta.x + 22, y: aiBeta.y, color: '#ffea00', fromPlayer: true }); 
-          aiBeta.cooldown = 12; // Hyper fast fire rate
+          aiBeta.cooldown = 12; 
         } 
       } 
       if (aiBeta.cooldown > 0) aiBeta.cooldown--; 
@@ -212,13 +211,17 @@ function loop() {
 
   // --- OVERPOWERED BOSS LOGIC ENGINE ---
   if (activeBoss) {
-    // Drop down entry animation
     if (activeBoss.y < activeBoss.targetY) activeBoss.y += 2;
 
-    // Movement pattern back and forth
     activeBoss.x += activeBoss.speed * activeBoss.dir;
     if (activeBoss.x <= 10 || activeBoss.x + activeBoss.w >= 590) activeBoss.dir *= -1;
 
-    // Drawing the Boss Vehicle
     if (activeBoss.type === 1) ctx.fillStyle = '#ff3333';
     else if (activeBoss.type === 2) ctx.fillStyle = '#9400d3';
+    else ctx.fillStyle = '#ff0055';
+    
+    ctx.fillRect(activeBoss.x, activeBoss.y, activeBoss.w, activeBoss.h);
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(activeBoss.x + 10, activeBoss.y + activeBoss.h - 8, activeBoss.w - 20, 5);
+
