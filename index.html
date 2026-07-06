@@ -5,10 +5,10 @@
   .p1-hud { color: #00ffcc; font-size: 14px; text-align: left; width: 33%; }
   .score-hud { color: #ffff00; font-size: 18px; text-align: center; width: 33%; }
   .ai-hud { color: #ff00ff; font-size: 14px; text-align: right; width: 33%; }
-</style> 
+</style>
 
-<div id="game-box"> 
-  <h1 id="cheat-btn" style="cursor: pointer; font-size: 26px; margin: 0 0 10px 0; user-select: none;">🌌 Dodger game</h1> 
+<div id="game-box">
+  <h1 id="cheat-btn" style="cursor: pointer; font-size: 26px; margin: 0 0 10px 0; user-select: none;">🌌 Dodger game</h1>
   
   <div class="hud-container">
     <div id="p1-status" class="p1-hud">PLAYER: ALIVE</div>
@@ -18,18 +18,16 @@
 
   <canvas id="canvas" width="600" height="600" tabindex="1"></canvas> 
   
-  <p style="color: #444; font-size: 12px; margin-top: 8px; line-height: 1.4; user-select: none;">
-    [Left / Right Arrows to Move | Space to Shoot]
-  </p> 
-</div> 
+  <p style="color: #444; font-size: 12px; margin-top: 8px; line-height: 1.4; user-select: none;">[Left / Right Arrows to Move | Space to Shoot]</p>
+</div>
 
-<script> 
-const cvs = document.getElementById('canvas'); 
-const ctx = cvs.getContext('2d'); 
+<script>
+const cvs = document.getElementById('canvas');
+const ctx = cvs.getContext('2d');
 
 // Global trackers
 let score = 0, isOver = false, frame = 0;
-let asteroids = [], lasers = [], bossLasers = []; 
+let asteroids = [], lasers = [], bossLasers = [], enemies = [], pickups = [];
 
 // Cheat variables
 let clickCount = 0;
@@ -44,184 +42,378 @@ let aiAlpha = { x: 150, y: 540, w: 26, h: 25, alive: true, cooldown: 0, respawnT
 // SECRET CHEAT DRONE Beta (Upgraded to Overpowered Double Shot)
 let aiBeta = { x: 420, y: 540, w: 26, h: 25, alive: false, cooldown: 0, respawnTimer: 0, speed: 5.5 };
 
+// Extra allied drone (aiGamma) for cheater (spawned when cheat active)
+let aiGamma = { x: 300, y: 540, w: 26, h: 25, alive: false, cooldown: 0, respawnTimer: 0, speed: 6 };
+
 // Boss System Configuration
 let activeBoss = null;
 let bossCounter = 0; 
 
-const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false }; 
+const keys = { ArrowLeft: false, ArrowRight: false, Space: false, Shift: false };
 
-window.addEventListener('keydown', (e) => { 
-  if (e.key === "Shift") keys.Shift = true; 
-  if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; } 
-  if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; } 
-  if (e.key === " ") { e.preventDefault(); keys.Space = true; } 
-}); 
+window.addEventListener('keydown', (e) => {
+  if (e.key === "Shift") keys.Shift = true;
+  if (e.key === "ArrowLeft") { e.preventDefault(); keys.ArrowLeft = true; }
+  if (e.key === "ArrowRight") { e.preventDefault(); keys.ArrowRight = true; }
+  if (e.key === " ") { e.preventDefault(); keys.Space = true; }
+});
 
-window.addEventListener('keyup', (e) => { 
-  if (e.key === "Shift") keys.Shift = false; 
-  if (e.key === "ArrowLeft") keys.ArrowLeft = false; 
-  if (e.key === "ArrowRight") keys.ArrowRight = false; 
-  if (e.key === " ") keys.Space = false; 
-}); 
+window.addEventListener('keyup', (e) => {
+  if (e.key === "Shift") keys.Shift = false;
+  if (e.key === "ArrowLeft") keys.ArrowLeft = false;
+  if (e.key === "ArrowRight") keys.ArrowRight = false;
+  if (e.key === " ") keys.Space = false;
+});
 
 // CHEAT INTERFACE ENGINE ROUTER
-document.getElementById('cheat-btn').addEventListener('click', () => { 
-  if (keys.Shift) { 
-    clickCount++; 
-    if (clickCount >= 3) { 
-      cheatActive = true; 
-      document.getElementById('cheat-btn').style.color = '#ffea00'; 
-      aiBeta.alive = true; 
-      aiBeta.x = p1.x + 40; 
-      aiBeta.respawnTimer = 0; 
-      clickCount = 0; 
+const cheatBtn = document.getElementById('cheat-btn');
+cheatBtn.addEventListener('click', () => {
+  if (keys.Shift) {
+    clickCount++;
+    if (clickCount >= 3) {
+      cheatActive = true;
+      document.getElementById('cheat-btn').style.color = '#ffea00';
+      aiBeta.alive = true; aiBeta.x = p1.x + 40; aiBeta.respawnTimer = 0;
+      aiGamma.alive = true; aiGamma.x = p1.x - 40; aiGamma.respawnTimer = 0;
+      clickCount = 0;
       if (isOver) resetGame();
-    } 
-  } else { 
-    clickCount = 0; 
-    if (isOver) resetGame(); 
-  } 
-}); 
+      // small bonus
+      score += 100;
+    }
+  } else {
+    clickCount = 0;
+    if (isOver) resetGame();
+  }
+});
 
-function updateHUD() { 
+function updateHUD() {
   document.getElementById('score').innerText = `SCORE: ${score}`;
-  let pStatus = p1.alive ? "PLAYER: ALIVE" : "PLAYER: CRASHED";
+  let pStatus = p1.alive ? 'PLAYER: ALIVE' : 'PLAYER: CRASHED';
   document.getElementById('p1-status').innerText = pStatus;
-  document.getElementById('p1-status').style.color = p1.alive ? "#00ffcc" : "#ff4081";
+  document.getElementById('p1-status').style.color = p1.alive ? '#00ffcc' : '#ff4081';
 
-  let activeSquadCount = (aiAlpha.alive ? 1 : 0) + (aiBeta.alive ? 1 : 0);
+  let activeSquadCount = (aiAlpha.alive ? 1 : 0) + (aiBeta.alive ? 1 : 0) + (aiGamma.alive ? 1 : 0);
   if (cheatActive) {
-    document.getElementById('ai-status').innerText = `AI SQUAD: ${activeSquadCount}/2`;
+    document.getElementById('ai-status').innerText = `AI SQUAD: ${activeSquadCount}/3`;
     document.getElementById('ai-status').style.color = '#ffea00';
   } else {
     if (aiAlpha.alive) {
-      document.getElementById('ai-status').innerText = "AI DRONE: ONLINE";
-      document.getElementById('ai-status').style.color = "#ff00ff";
+      document.getElementById('ai-status').innerText = 'AI DRONE: ONLINE';
+      document.getElementById('ai-status').style.color = '#ff00ff';
     } else {
       document.getElementById('ai-status').innerText = `AI REBUILDING (${Math.ceil(aiAlpha.respawnTimer / 60)}s)`;
-      document.getElementById('ai-status').style.color = "#ff4081";
+      document.getElementById('ai-status').style.color = '#ff4081';
     }
-  }
-} 
-
-function spawnBoss(type) {
-  if (type === 1) {
-    activeBoss = { name: "VANGUARD PRIME", x: 250, y: -80, targetY: 60, w: 100, h: 40, hp: 50, maxHp: 50, cooldown: 60, speed: 2, dir: 1, type: 1 };
-  } else if (type === 2) {
-    activeBoss = { name: "VOID LEVIATHAN", x: 220, y: -100, targetY: 80, w: 160, h: 50, hp: 120, maxHp: 120, cooldown: 45, speed: 3, dir: 1, type: 2 };
-  } else if (type === 3) {
-    activeBoss = { name: "OMEGA DOOMSDAY", x: 200, y: -120, targetY: 100, w: 200, h: 60, hp: 300, maxHp: 300, cooldown: 30, speed: 1.5, dir: 1, type: 3 };
   }
 }
 
-function resetGame() { 
-  score = 0; isOver = false; frame = 0; asteroids = []; lasers = []; bossLasers = []; activeBoss = null; bossCounter = 0;
-  cheatActive = false; 
+function spawnBoss(type) {
+  if (type === 1) {
+    activeBoss = { name: 'VANGUARD PRIME', x: 250, y: -80, targetY: 60, w: 100, h: 40, hp: 50, maxHp: 50, cooldown: 60, speed: 2, dir: 1, type: 1 };
+  } else if (type === 2) {
+    activeBoss = { name: 'VOID LEVIATHAN', x: 220, y: -100, targetY: 80, w: 160, h: 50, hp: 120, maxHp: 120, cooldown: 45, speed: 3, dir: 1, type: 2 };
+  } else if (type === 3) {
+    activeBoss = { name: 'OMEGA DOOMSDAY', x: 200, y: -120, targetY: 100, w: 200, h: 60, hp: 300, maxHp: 300, cooldown: 30, speed: 1.5, dir: 1, type: 3 };
+  } else if (type === 4) {
+    // New special boss requested: PHANTOM NEXUS
+    activeBoss = { name: 'PHANTOM NEXUS', x: 200, y: -140, targetY: 70, w: 220, h: 70, hp: 220, maxHp: 220, cooldown: 25, speed: 2, dir: 1, type: 4, spawnMinions: 0 };
+  }
+}
+
+function spawnEnemyFighter() {
+  enemies.push({ x: Math.random() * 560, y: -30, size: 18, hp: 2, speed: 2 + Math.random() * 1.6, cooldown: 40 + Math.floor(Math.random() * 40) });
+}
+
+function spawnAsteroid() {
+  asteroids.push({ x: Math.random() * 560, y: -30, size: Math.random() * 20 + 20, speed: Math.random() * 2.2 + 2 + (score / 450) });
+}
+
+function resetGame() {
+  score = 0; isOver = false; frame = 0; asteroids = []; lasers = []; bossLasers = []; enemies = []; pickups = []; activeBoss = null; bossCounter = 0;
+  cheatActive = false;
   document.getElementById('cheat-btn').style.color = '#00ffcc';
   p1.x = 285; p1.alive = true; p1.cooldown = 0;
   aiAlpha.x = 150; aiAlpha.alive = true; aiAlpha.cooldown = 0; aiAlpha.respawnTimer = 0;
   aiBeta.alive = false; aiBeta.cooldown = 0; aiBeta.respawnTimer = 0;
-  updateHUD(); loop(); 
-} 
+  aiGamma.alive = false; aiGamma.cooldown = 0; aiGamma.respawnTimer = 0;
+  updateHUD(); requestAnimationFrame(loop);
+}
 
-function loop() { 
-  if (isOver) { 
-    ctx.fillStyle = 'rgba(4, 4, 7, 0.85)'; ctx.fillRect(0, 0, 600, 600); 
-    ctx.fillStyle = '#ff4081'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; 
-    ctx.fillText('💥 MISSION FAILED 💥', 300, 270); 
+function loop() {
+  if (isOver) {
+    ctx.fillStyle = 'rgba(4, 4, 7, 0.85)'; ctx.fillRect(0, 0, 600, 600);
+    ctx.fillStyle = '#ff4081'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('💥 MISSION FAILED 💥', 300, 270);
     ctx.font = '16px sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('Click the Title to Restart', 300, 320);
-    return; 
-  } 
+    updateHUD();
+    return;
+  }
 
-  ctx.clearRect(0, 0, 600, 600); 
-  frame++; 
+  ctx.clearRect(0, 0, 600, 600);
+  frame++;
 
   // Trigger boss fights based on player score milestones
   if (!activeBoss) {
     if (score >= 300 && bossCounter === 0) { bossCounter = 1; spawnBoss(1); }
     else if (score >= 1000 && bossCounter === 1) { bossCounter = 2; spawnBoss(2); }
     else if (score >= 2500 && bossCounter === 2) { bossCounter = 3; spawnBoss(3); }
+    else if (score >= 5000 && bossCounter === 3) { bossCounter = 4; spawnBoss(4); }
   }
 
-  let sortedAsteroids = [...asteroids].sort((itemA, itemB) => itemB.y - itemA.y); 
+  // More enemies: spawn asteroids and fighters at variable rates
+  let spawnRateAst = Math.max(8, 24 - Math.floor(score / 90));
+  let spawnRateFtr = Math.max(200, 420 - Math.floor(score / 20));
+  if (frame % spawnRateAst === 0) spawnAsteroid();
+  if (frame % spawnRateFtr === 0) spawnEnemyFighter();
 
-  // --- PLAYER MOVEMENT CONTROL --- 
-  if (p1.alive) { 
-    if (keys.ArrowLeft && p1.x > 0) p1.x -= 6; 
-    if (keys.ArrowRight && p1.x < 574) p1.x += 6; 
-    if (p1.cooldown > 0) p1.cooldown--; 
-    if (keys.Space && p1.cooldown === 0) { 
-      lasers.push({ x: p1.x + 11, y: p1.y, color: '#00ffcc', fromPlayer: true }); 
-      p1.cooldown = 14; 
-    } 
-    ctx.fillStyle = '#00ffcc'; ctx.beginPath(); 
-    ctx.moveTo(p1.x + 13, p1.y); ctx.lineTo(p1.x + 26, p1.y + p1.h); ctx.lineTo(p1.x, p1.y + p1.h); 
-    ctx.closePath(); ctx.fill(); 
-  } 
+  // Sort for targeting
+  let sortedAsteroids = [...asteroids].sort((a,b) => b.y - a.y);
 
-  // --- AUTOMATED AI DRONE ALPHA (Targets Lowest Asteroid or Boss) --- 
-  if (aiAlpha.alive) { 
-    let targetAlpha = activeBoss ? activeBoss : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null); 
-    if (targetAlpha) { 
-      let targetCenterX = targetAlpha.x + ((targetAlpha.size || targetAlpha.w) / 2); 
-      let aiCenterX = aiAlpha.x + (aiAlpha.w / 2); 
-      if (aiCenterX < targetCenterX - 4) aiAlpha.x += aiAlpha.speed; 
-      else if (aiCenterX > targetCenterX + 4) aiAlpha.x -= aiAlpha.speed; 
-      if (aiAlpha.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 60) { 
-        lasers.push({ x: aiAlpha.x + 11, y: aiAlpha.y, color: '#ff00ff', fromPlayer: true }); 
-        aiAlpha.cooldown = 20; 
-      } 
-    } 
-    if (aiAlpha.cooldown > 0) aiAlpha.cooldown--; 
-    if (aiAlpha.x < 0) aiAlpha.x = 0; if (aiAlpha.x > 574) aiAlpha.x = 574; 
-    ctx.fillStyle = '#ff00ff'; ctx.fillRect(aiAlpha.x, aiAlpha.y + 8, aiAlpha.w, aiAlpha.h - 8); 
-    ctx.fillRect(aiAlpha.x + 8, aiAlpha.y, 10, 8); 
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(aiAlpha.x + 4, aiAlpha.y + 12, 4, 4); ctx.fillRect(aiAlpha.x + 18, aiAlpha.y + 12, 4, 4); 
-  } else { 
-    aiAlpha.respawnTimer--; 
-    if (aiAlpha.respawnTimer <= 0) { aiAlpha.alive = true; aiAlpha.x = p1.x; } 
-  } 
+  // --- PLAYER MOVEMENT CONTROL ---
+  if (p1.alive) {
+    if (keys.ArrowLeft && p1.x > 0) p1.x -= 6;
+    if (keys.ArrowRight && p1.x < 574) p1.x += 6;
+    if (p1.cooldown > 0) p1.cooldown--;
+    if (keys.Space && p1.cooldown === 0) {
+      lasers.push({ x: p1.x + 11, y: p1.y, color: '#00ffcc', fromPlayer: true, dmg: 1 });
+      p1.cooldown = cheatActive ? 6 : 14; // faster fire if cheating
+    }
+    // draw player
+    ctx.fillStyle = '#00ffcc'; ctx.beginPath();
+    ctx.moveTo(p1.x + 13, p1.y); ctx.lineTo(p1.x + 26, p1.y + p1.h); ctx.lineTo(p1.x, p1.y + p1.h);
+    ctx.closePath(); ctx.fill();
+  }
 
-  // --- CHEATER PERK: ELITE DRONE BETA (Fires OP Split-Twin Lasers) --- 
-  if (cheatActive) { 
-    if (aiBeta.alive) { 
-      let targetBeta = activeBoss ? activeBoss : (sortedAsteroids.length > 1 ? sortedAsteroids[1] : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null)); 
-      if (targetBeta) { 
-        let targetCenterX = targetBeta.x + ((targetBeta.size || targetBeta.w) / 2); 
-        let aiCenterX = aiBeta.x + (aiBeta.w / 2); 
-        if (aiCenterX < targetCenterX - 4) aiBeta.x += aiBeta.speed; 
-        else if (aiCenterX > targetCenterX + 4) aiBeta.x -= aiBeta.speed; 
-        if (aiBeta.cooldown === 0 && Math.abs(aiCenterX - targetCenterX) < 80) { 
-          lasers.push({ x: aiBeta.x, y: aiBeta.y, color: '#ffea00', fromPlayer: true }); 
-          lasers.push({ x: aiBeta.x + 22, y: aiBeta.y, color: '#ffea00', fromPlayer: true }); 
-          aiBeta.cooldown = 12; 
-        } 
-      } 
-      if (aiBeta.cooldown > 0) aiBeta.cooldown--; 
-      if (aiBeta.x < 0) aiBeta.x = 0; if (aiBeta.x > 574) aiBeta.x = 574; 
-      ctx.fillStyle = '#ffea00'; ctx.beginPath(); 
-      ctx.moveTo(aiBeta.x + 13, aiBeta.y); ctx.lineTo(aiBeta.x + 26, aiBeta.y + aiBeta.h); ctx.lineTo(aiBeta.x, aiBeta.y + aiBeta.h); 
-      ctx.closePath(); ctx.fill(); 
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(aiBeta.x + 11, aiBeta.y + 12, 4, 6); 
-    } else { 
-      aiBeta.respawnTimer--; 
-      if (aiBeta.respawnTimer <= 0) { aiBeta.alive = true; aiBeta.x = p1.x; } 
-    } 
-  } 
+  // --- AI Drone Alpha ---
+  if (aiAlpha.alive) {
+    let targetAlpha = activeBoss ? activeBoss : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null);
+    if (targetAlpha) {
+      let tCenter = targetAlpha.x + ((targetAlpha.size || targetAlpha.w) / 2);
+      let aiCenter = aiAlpha.x + (aiAlpha.w / 2);
+      if (aiCenter < tCenter - 4) aiAlpha.x += aiAlpha.speed;
+      else if (aiCenter > tCenter + 4) aiAlpha.x -= aiAlpha.speed;
+      if (aiAlpha.cooldown === 0 && Math.abs(aiCenter - tCenter) < 60) {
+        lasers.push({ x: aiAlpha.x + 11, y: aiAlpha.y, color: '#ff00ff', fromPlayer: true, dmg: 1 });
+        aiAlpha.cooldown = 20;
+      }
+    }
+    if (aiAlpha.cooldown > 0) aiAlpha.cooldown--;
+    aiAlpha.x = Math.max(0, Math.min(574, aiAlpha.x));
+    // draw aiAlpha
+    ctx.fillStyle = '#ff00ff'; ctx.fillRect(aiAlpha.x, aiAlpha.y + 8, aiAlpha.w, aiAlpha.h - 8);
+    ctx.fillRect(aiAlpha.x + 8, aiAlpha.y, 10, 8);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(aiAlpha.x + 4, aiAlpha.y + 12, 4, 4); ctx.fillRect(aiAlpha.x + 18, aiAlpha.y + 12, 4, 4);
+  } else {
+    aiAlpha.respawnTimer--;
+    if (aiAlpha.respawnTimer <= 0) { aiAlpha.alive = true; aiAlpha.x = p1.x; }
+  }
 
-  // --- OVERPOWERED BOSS LOGIC ENGINE ---
+  // --- CHEATER PERKS: aiBeta and aiGamma ---
+  if (cheatActive) {
+    if (aiBeta.alive) {
+      let targetBeta = activeBoss ? activeBoss : (sortedAsteroids.length > 1 ? sortedAsteroids[1] : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null));
+      if (targetBeta) {
+        let tCenter = targetBeta.x + ((targetBeta.size || targetBeta.w) / 2);
+        let aiCenter = aiBeta.x + (aiBeta.w / 2);
+        if (aiCenter < tCenter - 4) aiBeta.x += aiBeta.speed;
+        else if (aiCenter > tCenter + 4) aiBeta.x -= aiBeta.speed;
+        if (aiBeta.cooldown === 0 && Math.abs(aiCenter - tCenter) < 90) {
+          // split shot
+          lasers.push({ x: aiBeta.x + 2, y: aiBeta.y, color: '#ffea00', fromPlayer: true, dmg: 1 });
+          lasers.push({ x: aiBeta.x + 20, y: aiBeta.y, color: '#ffea00', fromPlayer: true, dmg: 1 });
+          aiBeta.cooldown = 12;
+        }
+      }
+      if (aiBeta.cooldown > 0) aiBeta.cooldown--;
+      aiBeta.x = Math.max(0, Math.min(574, aiBeta.x));
+      ctx.fillStyle = '#ffea00'; ctx.beginPath(); ctx.moveTo(aiBeta.x + 13, aiBeta.y); ctx.lineTo(aiBeta.x + 26, aiBeta.y + aiBeta.h); ctx.lineTo(aiBeta.x, aiBeta.y + aiBeta.h); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(aiBeta.x + 11, aiBeta.y + 12, 4, 6);
+    }
+
+    if (aiGamma.alive) {
+      let targetGamma = activeBoss ? activeBoss : (sortedAsteroids.length > 2 ? sortedAsteroids[2] : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null));
+      if (targetGamma) {
+        let tCenter = targetGamma.x + ((targetGamma.size || targetGamma.w) / 2);
+        let aiCenter = aiGamma.x + (aiGamma.w / 2);
+        if (aiCenter < tCenter - 4) aiGamma.x += aiGamma.speed;
+        else if (aiCenter > tCenter + 4) aiGamma.x -= aiGamma.speed;
+        if (aiGamma.cooldown === 0 && Math.abs(aiCenter - tCenter) < 100) {
+          lasers.push({ x: aiGamma.x + 11, y: aiGamma.y, color: '#ffd480', fromPlayer: true, dmg: 1 });
+          aiGamma.cooldown = 10;
+        }
+      }
+      if (aiGamma.cooldown > 0) aiGamma.cooldown--;
+      aiGamma.x = Math.max(0, Math.min(574, aiGamma.x));
+      ctx.fillStyle = '#ffd480'; ctx.fillRect(aiGamma.x, aiGamma.y + 8, aiGamma.w, aiGamma.h - 8);
+    }
+  }
+
+  // --- BOSS LOGIC ---
   if (activeBoss) {
     if (activeBoss.y < activeBoss.targetY) activeBoss.y += 2;
-
     activeBoss.x += activeBoss.speed * activeBoss.dir;
     if (activeBoss.x <= 10 || activeBoss.x + activeBoss.w >= 590) activeBoss.dir *= -1;
 
+    // draw boss
     if (activeBoss.type === 1) ctx.fillStyle = '#ff3333';
     else if (activeBoss.type === 2) ctx.fillStyle = '#9400d3';
-    else ctx.fillStyle = '#ff0055';
-    
+    else if (activeBoss.type === 3) ctx.fillStyle = '#ff0055';
+    else ctx.fillStyle = '#00bfff';
     ctx.fillRect(activeBoss.x, activeBoss.y, activeBoss.w, activeBoss.h);
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(activeBoss.x + 10, activeBoss.y + activeBoss.h - 8, activeBoss.w - 20, 5);
 
+    // draw boss HP
+    ctx.fillStyle = '#000000'; ctx.fillRect(activeBoss.x + 8, activeBoss.y + activeBoss.h - 8, activeBoss.w - 16, 8);
+    ctx.fillStyle = '#00ff00';
+    let hpWidth = Math.max(2, Math.floor((activeBoss.hp / activeBoss.maxHp) * (activeBoss.w - 16)));
+    ctx.fillRect(activeBoss.x + 8, activeBoss.y + activeBoss.h - 8, hpWidth, 8);
+    ctx.fillStyle = '#ffffff'; ctx.font = '12px sans-serif'; ctx.fillText(activeBoss.name, activeBoss.x + activeBoss.w / 2, activeBoss.y - 6);
+
+    // boss shooting / special behaviors
+    if (activeBoss.cooldown <= 0) {
+      if (activeBoss.type === 1) {
+        // VANGUARD: fires single downward shots
+        bossLasers.push({ x: activeBoss.x + activeBoss.w / 2, y: activeBoss.y + activeBoss.h, vx: 0, vy: 4, color: '#ff4444' });
+        activeBoss.cooldown = 50;
+      } else if (activeBoss.type === 2) {
+        // LEVIATHAN: spreads
+        for (let i = -2; i <= 2; i++) bossLasers.push({ x: activeBoss.x + 20 + i * 20, y: activeBoss.y + activeBoss.h, vx: i * 0.6, vy: 3.5, color: '#9400d3' });
+        activeBoss.cooldown = 70;
+      } else if (activeBoss.type === 3) {
+        // OMEGA: heavy beam
+        bossLasers.push({ x: activeBoss.x + activeBoss.w / 2, y: activeBoss.y + activeBoss.h, vx: 0, vy: 6, color: '#ff0055' });
+        activeBoss.cooldown = 35;
+      } else if (activeBoss.type === 4) {
+        // PHANTOM NEXUS: spawns minions and teleports occasionally
+        // spawn small minions
+        for (let m = 0; m < 3; m++) {
+          enemies.push({ x: activeBoss.x + Math.random() * activeBoss.w, y: activeBoss.y + activeBoss.h + 6, size: 14, hp: 1, speed: 2.4, cooldown: 60 });
+        }
+        // teleports (shift x)
+        activeBoss.x = Math.max(10, Math.min(590 - activeBoss.w, activeBoss.x + (Math.random() > 0.5 ? 80 : -80)));
+        // shoots a fast volley
+        for (let i = -3; i <= 3; i++) bossLasers.push({ x: activeBoss.x + activeBoss.w / 2, y: activeBoss.y + activeBoss.h, vx: i * 0.8, vy: 4.5, color: '#00bfff' });
+        activeBoss.cooldown = 90;
+        activeBoss.spawnMinions = (activeBoss.spawnMinions || 0) + 1;
+      }
+    } else {
+      activeBoss.cooldown--;
+    }
+  }
+
+  // --- LASERS (player/allies) ---
+  for (let i = lasers.length - 1; i >= 0; i--) {
+    let l = lasers[i]; l.y -= 9;
+    ctx.fillStyle = l.color; ctx.fillRect(l.x, l.y, 4, 12);
+
+    // hit asteroids
+    for (let j = asteroids.length - 1; j >= 0; j--) {
+      let a = asteroids[j];
+      if (l.x < a.x + a.size && l.x + 4 > a.x && l.y < a.y + a.size && l.y + 12 > a.y) {
+        lasers.splice(i, 1); asteroids.splice(j, 1); score += 10; break;
+      }
+    }
+    // hit enemies
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      let e = enemies[j];
+      if (l.x < e.x + e.size && l.x + 4 > e.x && l.y < e.y + e.size && l.y + 12 > e.y) {
+        e.hp -= (l.dmg || 1);
+        lasers.splice(i, 1);
+        if (e.hp <= 0) { enemies.splice(j, 1); score += 25; }
+        break;
+      }
+    }
+    // hit active boss
+    if (activeBoss) {
+      if (l.x < activeBoss.x + activeBoss.w && l.x + 4 > activeBoss.x && l.y < activeBoss.y + activeBoss.h && l.y + 12 > activeBoss.y) {
+        activeBoss.hp -= (l.dmg || 1) * (cheatActive ? 1.5 : 1);
+        lasers.splice(i, 1);
+        if (activeBoss.hp <= 0) {
+          // boss defeated
+          score += (activeBoss.maxHp * 2);
+          // drop pickups for cheater
+          for (let p = 0; p < 3; p++) pickups.push({ x: activeBoss.x + Math.random() * activeBoss.w, y: activeBoss.y + activeBoss.h, type: 'cheat' });
+          activeBoss = null;
+        }
+      }
+    }
+    if (l && l.y < -20) lasers.splice(i, 1);
+  }
+
+  // --- Boss lasers and enemy fire ---
+  for (let i = bossLasers.length - 1; i >= 0; i--) {
+    let bl = bossLasers[i]; bl.x += bl.vx; bl.y += bl.vy;
+    ctx.fillStyle = bl.color; ctx.fillRect(bl.x - 3, bl.y - 6, 6, 12);
+
+    // hit player
+    if (p1.alive && bl.x - 3 < p1.x + p1.w && bl.x + 3 > p1.x && bl.y - 6 < p1.y + p1.h && bl.y + 6 > p1.y) {
+      bossLasers.splice(i, 1);
+      if (!cheatActive) { p1.alive = false; isOver = true; }
+      else { score += 5; }
+      continue;
+    }
+    // hit allies
+    if (aiAlpha.alive && bl.x - 3 < aiAlpha.x + aiAlpha.w && bl.x + 3 > aiAlpha.x && bl.y - 6 < aiAlpha.y + aiAlpha.h && bl.y + 6 > aiAlpha.y) {
+      aiAlpha.alive = false; aiAlpha.respawnTimer = 180; bossLasers.splice(i, 1); continue;
+    }
+    if (aiBeta.alive && bl.x - 3 < aiBeta.x + aiBeta.w && bl.x + 3 > aiBeta.x && bl.y - 6 < aiBeta.y + aiBeta.h && bl.y + 6 > aiBeta.y) {
+      aiBeta.alive = false; aiBeta.respawnTimer = 240; bossLasers.splice(i, 1); continue;
+    }
+    if (aiGamma.alive && bl.x - 3 < aiGamma.x + aiGamma.w && bl.x + 3 > aiGamma.x && bl.y - 6 < aiGamma.y + aiGamma.h && bl.y + 6 > aiGamma.y) {
+      aiGamma.alive = false; aiGamma.respawnTimer = 240; bossLasers.splice(i, 1); continue;
+    }
+
+    if (bl && bl.y > 700) bossLasers.splice(i, 1);
+  }
+
+  // --- Enemies update ---
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    let e = enemies[i]; e.y += e.speed;
+    ctx.fillStyle = '#bbff66'; ctx.fillRect(e.x, e.y, e.size, e.size);
+    if (e.cooldown > 0) e.cooldown--;
+    else {
+      // fire downward small bullet
+      bossLasers.push({ x: e.x + e.size / 2, y: e.y + e.size, vx: 0, vy: 3.6, color: '#ffaa33' });
+      e.cooldown = 80;
+    }
+
+    // collisions with player
+    if (p1.alive && p1.x < e.x + e.size && p1.x + p1.w > e.x && p1.y < e.y + e.size && p1.y + p1.h > e.y) {
+      enemies.splice(i, 1); if (!cheatActive) { p1.alive = false; isOver = true; } else score += 10;
+      continue;
+    }
+
+    if (e.y > 650) enemies.splice(i, 1);
+  }
+
+  // --- Asteroids update ---
+  for (let b = asteroids.length - 1; b >= 0; b--) {
+    let ast = asteroids[b]; ast.y += ast.speed;
+    ctx.fillStyle = '#ff9900'; ctx.fillRect(ast.x, ast.y, ast.size, ast.size);
+    if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { p1.alive = false; isOver = true; continue; }
+    if (aiAlpha.alive && aiAlpha.x < ast.x + ast.size && aiAlpha.x + aiAlpha.w > ast.x && aiAlpha.y < ast.y + ast.size && aiAlpha.y + aiAlpha.h > ast.y) { aiAlpha.alive = false; aiAlpha.respawnTimer = 180; asteroids.splice(b,1); continue; }
+    if (aiBeta.alive && aiBeta.x < ast.x + ast.size && aiBeta.x + aiBeta.w > ast.x && aiBeta.y < ast.y + ast.size && aiBeta.y + aiBeta.h > ast.y) { aiBeta.alive = false; aiBeta.respawnTimer = 240; asteroids.splice(b,1); continue; }
+    if ((cheatActive || aiGamma.alive) && aiGamma.alive && aiGamma.x < ast.x + ast.size && aiGamma.x + aiGamma.w > ast.x && aiGamma.y < ast.y + ast.size && aiGamma.y + aiGamma.h > ast.y) { aiGamma.alive = false; aiGamma.respawnTimer = 200; asteroids.splice(b,1); continue; }
+    if (ast.y > 620) { asteroids.splice(b,1); score = Math.max(0, score - 1); }
+  }
+
+  // --- Pickups (for cheater) ---
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    let p = pickups[i]; p.y += 2; ctx.fillStyle = '#ffd700'; ctx.fillRect(p.x, p.y, 8, 8);
+    if (cheatActive && p1.x < p.x + 8 && p1.x + p1.w > p.x && p1.y < p.y + 8 && p1.y + p1.h > p.y) {
+      // apply perk pick
+      score += 75; pickups.splice(i,1);
+    }
+    if (p.y > 700) pickups.splice(i,1);
+  }
+
+  // --- Respawn timers for allies ---
+  if (!aiAlpha.alive) { aiAlpha.respawnTimer--; if (aiAlpha.respawnTimer <= 0) { aiAlpha.alive = true; aiAlpha.x = p1.x; } }
+  if (!aiBeta.alive) { aiBeta.respawnTimer--; if (aiBeta.respawnTimer <= 0 && cheatActive) { aiBeta.alive = true; aiBeta.x = p1.x + 40; } }
+  if (!aiGamma.alive) { aiGamma.respawnTimer--; if (aiGamma.respawnTimer <= 0 && cheatActive) { aiGamma.alive = true; aiGamma.x = p1.x - 40; } }
+
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// Start the game
+resetGame();
+</script>
