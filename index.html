@@ -73,10 +73,9 @@ document.getElementById('cheat-btn').addEventListener('click', () => {
     clickCount++; 
     if (clickCount >= 3) { 
       cheatActive = true; 
-      // Subtle cue change: title color modifications update to confirm state metrics
       document.getElementById('cheat-btn').style.color = '#ffea00'; 
       
-      // Instantly inject the hidden Golden Bot into action fields
+      // Instantly inject the hidden Golden Bot into active state
       aiBeta.alive = true;
       aiBeta.x = p1.x + 40;
       aiBeta.respawnTimer = 0;
@@ -97,7 +96,7 @@ function updateHUD() {
   document.getElementById('p1-status').innerText = pStatus;
   document.getElementById('p1-status').style.color = p1.alive ? "#00ffcc" : "#ff4081";
 
-  // Manage custom squad text loops stealthily without alerting other players
+  // Manage custom squad text loops stealthily
   let activeSquadCount = (aiAlpha.alive ? 1 : 0) + (aiBeta.alive ? 1 : 0);
   if (cheatActive) {
     document.getElementById('ai-status').innerText = `AI SQUAD: ${activeSquadCount}/2`;
@@ -121,8 +120,6 @@ function resetGame() {
   p1.x = 285; p1.alive = true; p1.cooldown = 0;
 
   aiAlpha.x = 150; aiAlpha.alive = true; aiAlpha.cooldown = 0; aiAlpha.respawnTimer = 0;
-  
-  // Re-lock the golden backup bot upon game reset parameters
   aiBeta.alive = false; aiBeta.cooldown = 0; aiBeta.respawnTimer = 0;
 
   updateHUD(); loop(); 
@@ -140,7 +137,7 @@ function loop() {
   ctx.clearRect(0, 0, 600, 600); 
   frame++; 
 
-  // Fixed targeting array lookup configuration settings
+  // Safely extract sorted tracking indices
   let sortedAsteroids = [...asteroids].sort((itemA, itemB) => itemB.y - itemA.y);
 
   // --- PLAYER MOVEMENT CONTROL ---
@@ -178,7 +175,6 @@ function loop() {
     if (aiAlpha.cooldown > 0) aiAlpha.cooldown--;
     if (aiAlpha.x < 0) aiAlpha.x = 0; if (aiAlpha.x > 574) aiAlpha.x = 574;
 
-    // Render Magenta Shell
     ctx.fillStyle = '#ff00ff'; ctx.fillRect(aiAlpha.x, aiAlpha.y + 8, aiAlpha.w, aiAlpha.h - 8);
     ctx.fillRect(aiAlpha.x + 8, aiAlpha.y, 10, 8); 
     ctx.fillStyle = '#ffffff'; ctx.fillRect(aiAlpha.x + 4, aiAlpha.y + 12, 4, 4); ctx.fillRect(aiAlpha.x + 18, aiAlpha.y + 12, 4, 4);
@@ -190,7 +186,6 @@ function loop() {
   // --- ELITE UNLOCKED DRONE BETA (Targets Second Lowest Asteroid) ---
   if (cheatActive) {
     if (aiBeta.alive) {
-      // Logic protection routing: If 1 asteroid remains, lock onto it. If more, take the 2nd index element array structure.
       let targetBeta = sortedAsteroids.length > 1 ? sortedAsteroids[1] : (sortedAsteroids.length > 0 ? sortedAsteroids[0] : null);
 
       if (targetBeta) {
@@ -208,14 +203,10 @@ function loop() {
       if (aiBeta.cooldown > 0) aiBeta.cooldown--;
       if (aiBeta.x < 0) aiBeta.x = 0; if (aiBeta.x > 574) aiBeta.x = 574;
 
-      // Render Elite Solid Golden Interceptor Hull Model
       ctx.fillStyle = '#ffea00'; 
       ctx.beginPath();
-      ctx.moveTo(aiBeta.x + 13, aiBeta.y);
-      ctx.lineTo(aiBeta.x + 26, aiBeta.y + aiBeta.h);
-      ctx.lineTo(aiBeta.x, aiBeta.y + aiBeta.h);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(aiBeta.x + 13, aiBeta.y); ctx.lineTo(aiBeta.x + 26, aiBeta.y + aiBeta.h); ctx.lineTo(aiBeta.x, aiBeta.y + aiBeta.h);
+      ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#ffffff'; ctx.fillRect(aiBeta.x + 11, aiBeta.y + 12, 4, 6);
     } else {
       aiBeta.respawnTimer--;
@@ -247,11 +238,19 @@ function loop() {
     if (l && l.y < -20) lasers.splice(i, 1); 
   } 
 
-  // --- ASTEROIDS PHYSICS & HITBOX CRASH ROUTINES ---
+  // --- ASTEROIDS COLLISION ROUTINES ---
   for (let b = asteroids.length - 1; b >= 0; b--) { 
     let ast = asteroids[b]; ast.y += ast.speed; 
 
     ctx.fillStyle = '#ff9900'; ctx.fillRect(ast.x, ast.y, ast.size, ast.size); 
 
-    // Player collision test check
     if (p1.alive && p1.x < ast.x + ast.size && p1.x + p1.w > ast.x && p1.y < ast.y + ast.size && p1.y + p1.h > ast.y) { 
+      p1.alive = false; isOver = true; continue; 
+    } 
+
+    if (aiAlpha.alive && aiAlpha.x < ast.x + ast.size && aiAlpha.x + aiAlpha.w > ast.x && aiAlpha.y < ast.y + ast.size && aiAlpha.y + aiAlpha.h > ast.y) { 
+      aiAlpha.alive = false; aiAlpha.respawnTimer = 1800; 
+      asteroids.splice(b, 1); continue; 
+    } 
+
+    if (cheatActive && aiBeta.alive && aiBeta.x < ast.x + ast.size && aiBeta.x + aiBeta.w > ast.x && aiBeta.y < ast.y + ast.size && aiBeta.y + aiBeta.h > ast.y) { 
