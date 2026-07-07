@@ -10,7 +10,8 @@
     html,body{height:100%;margin:0;background:linear-gradient(180deg,#02020a 0%, #05112a 60%, #071026 100%);font-family:'Orbitron',sans-serif;color:var(--accent2);-webkit-font-smoothing:antialiased}
     #game-box{width:100%;max-width:980px;margin:18px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));box-shadow:0 6px 30px rgba(1,1,6,0.5);border:1px solid rgba(0,230,184,0.08)}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    h1#title{cursor:pointer;margin:0;color:var(--accent2);font-size:22px;display:flex;align-items:center;gap:8px}
+    h1#title{cursor:pointer;margin:0;color:var(--accent2);font-size:22px;display:flex;align-items:center;gap:8px;transition:all 0.2s}
+    h1#title:hover{color:var(--accent)}
     .controls-top{display:flex;gap:8px;align-items:center}
     .icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:700;transition:all 0.2s}
     .icon-btn:hover{background:rgba(255,64,129,0.1);color:var(--accent)}
@@ -65,7 +66,7 @@
       <div id="overlay" class="overlay" style="display:none"><div class="panel" id="panel"></div></div>
     </div>
 
-    <div class="sub">Collect power-ups, chain combos, and defeat bosses. Mobile controls shown on small screens.</div>
+    <div class="sub">Click the title or press SPACE to start • Arrow keys to move • SPACE to shoot</div>
 
     <div class="controls" id="touch-controls" style="display:none">
       <button class="touch-btn" id="btn-left">◀</button>
@@ -85,13 +86,12 @@ let shopPoints = Number(localStorage.getItem(SHOP_KEYS.POINTS) || 0);
 let playerXP = Number(localStorage.getItem(SHOP_KEYS.XP) || 0);
 let playerLevel = Number(localStorage.getItem(SHOP_KEYS.LEVEL) || 1);
 
-// Achievements & leaderboard
+// Achievements
 const ACH_KEY = 'dodger_achievements';
 let achievements = JSON.parse(localStorage.getItem(ACH_KEY) || '[]');
 function unlockAchievement(id, title){ if (!achievements.includes(id)){ achievements.push(id); localStorage.setItem(ACH_KEY, JSON.stringify(achievements)); showAchievement(title); } }
 function showAchievement(text){ const el = document.getElementById('achievementBox'); el.innerText = '⭐ ' + text; el.style.display = 'block'; setTimeout(()=>el.style.display='none', 4200); }
 
-// Expose username globally for HUD
 window.dodgerUser = shopUser;
 
 // ----------------------------- Canvas & audio -----------------------------
@@ -99,7 +99,8 @@ const cvs = document.getElementById('canvas'); const ctx = cvs.getContext('2d');
 resizeCanvas(); window.addEventListener('resize', resizeCanvas);
 function resizeCanvas(){ const ratio = window.devicePixelRatio || 1; const size = Math.min(1100, Math.max(640, Math.floor(Math.min(window.innerWidth*0.9, 980)))); cvs.width = size * ratio; cvs.height = size * ratio; ctx.scale(ratio, ratio); }
 
-let audioCtx, masterGain, musicNode; let muted = false; function ensureAudio(){ if (!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination); masterGain.gain.value = 0.07; } }
+let audioCtx, masterGain, musicNode; let muted = false; 
+function ensureAudio(){ if (!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination); masterGain.gain.value = 0.07; } }
 function toggleMute(){ muted = !muted; if (masterGain) masterGain.gain.value = muted ? 0 : 0.07; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; }
 function startMusic(){ try{ const o1 = audioCtx.createOscillator(); const o2 = audioCtx.createOscillator(); const g = audioCtx.createGain(); o1.type='sine'; o2.type='sine'; o1.frequency.value = 110; o2.frequency.value = 165; o1.connect(g); o2.connect(g); g.connect(masterGain); g.gain.value = 0.02; o1.start(); o2.start(); o1.stop(audioCtx.currentTime + 999999); o2.stop(audioCtx.currentTime + 999999); }catch(e){} }
 function sfx(type,pitch=1,when=0){ try{ ensureAudio(); const t = audioCtx.currentTime + when; if (type==='shoot'){ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.value=180*pitch; o.connect(g); g.connect(masterGain); g.gain.setValueAtTime(0.04,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.1); o.start(t); o.stop(t+0.1); } else if(type==='hit'){ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.setValueAtTime(200*pitch,t); o.frequency.exponentialRampToValueAtTime(80*pitch,t+0.15); o.connect(g); g.connect(masterGain); g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.15); o.start(t); o.stop(t+0.15); } }catch(e){} }
@@ -121,7 +122,6 @@ let asteroids = [], enemies = [], lasers = [], bullets = [], pickups = [], parti
 let activeBoss = null, bossStage = 0, wave = 0; let chaosMode = false;
 const keys = { left:false, right:false, fire:false, shift:false };
 
-// Player and allies with enhanced AI state
 const player = { x: 450, y: 820, w:28, h:24, speed:7.2, cooldown:0, rate:10, health:1, lives:3, shield:0, shieldTimer:0, spread:false, rapid:false, skin:'default' };
 const aiAlpha = { x: 160, y: 820, w:24, h:20, speed:4.8, cooldown:0, alive:true, respawn:0, moveDir:1, moveTimer:0 };
 const aiBeta = { x: 560, y: 820, w:24, h:20, speed:5.6, cooldown:0, alive:false, respawn:0, moveDir:1, moveTimer:0 };
@@ -137,7 +137,7 @@ if (btnLeft){ btnLeft.addEventListener('touchstart', ()=>keys.left=true); btnLef
 if (btnRight){ btnRight.addEventListener('touchstart', ()=>keys.right=true); btnRight.addEventListener('touchend', ()=>keys.right=false); }
 if (btnFire){ btnFire.addEventListener('touchstart', ()=>keys.fire=true); btnFire.addEventListener('touchend', ()=>keys.fire=false); }
 
-window.addEventListener('keydown',(e)=>{ if (e.key==='ArrowLeft'){ e.preventDefault(); keys.left=true; } if (e.key==='ArrowRight'){ e.preventDefault(); keys.right=true; } if (e.key===' '){ e.preventDefault(); keys.fire=true; } if (e.key==='Shift') keys.shift=true; });
+window.addEventListener('keydown',(e)=>{ if (e.key==='ArrowLeft'){ e.preventDefault(); keys.left=true; } if (e.key==='ArrowRight'){ e.preventDefault(); keys.right=true; } if (e.key===' '){ e.preventDefault(); keys.fire=true; if(isOver && !running) startGame(); } if (e.key==='Shift') keys.shift=true; });
 window.addEventListener('keyup',(e)=>{ if (e.key==='ArrowLeft') keys.left=false; if (e.key==='ArrowRight') keys.right=false; if (e.key===' ') keys.fire=false; if (e.key==='Shift') keys.shift=false; });
 
 let clickCount = 0;
@@ -174,7 +174,7 @@ function rectHit(aX,aY,aW,aH,bX,bY,bW,bH){ return aX < bX + bW && aX + aW > bX &
 
 function updateHUD(){ scoreHud.innerText = `SCORE: ${score}  ×${Math.floor(multiplier*100)/100} ${shopUser && shopUser.name? '• ' + shopUser.name : ''}`; playerHud.innerText = `LIVES: ${player.lives} | XP: ${Math.floor(playerXP)} (Lvl ${playerLevel})`; aiHud.innerText = `DRONES: ${[aiAlpha,aiBeta,aiGamma].filter(a=>a.alive).length} | WAVE: ${wave}`; }
 
-function startGame(){ ensureAudio(); score=0; multiplier=1; comboTimer=0; frame=0; isOver=false; running=true; asteroids=[]; enemies=[]; lasers=[]; bullets=[]; pickups=[]; particles=[]; floats.length=0; activeBoss=null; bossStage=0; wave=1; respawnPlayer(); startMusic(); }
+function startGame(){ ensureAudio(); score=0; multiplier=1; comboTimer=0; frame=0; isOver=false; running=true; asteroids=[]; enemies=[]; lasers=[]; bullets=[]; pickups=[]; particles=[]; floats.length=0; activeBoss=null; bossStage=0; wave=1; respawnPlayer(); startMusic(); loop(); }
 
 function respawnPlayer(){ const W = cvs.width/(window.devicePixelRatio||1); const H = cvs.height/(window.devicePixelRatio||1); player.x=W/2 - player.w/2; player.y=H-100; player.cooldown=0; player.invul=120; player.shieldTimer=0; }
 
@@ -206,7 +206,7 @@ function loop(){ if(!running) return; frame++; drawBackground(); const W = cvs.w
   for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; b.x+=b.vx; b.y+=b.vy; ctx.fillStyle=b.color; ctx.fillRect(b.x-3,b.y-6,6,12); 
     if(player.invul>0){ if(rectHit(b.x-3,b.y-6,6,12,player.x,player.y,player.w,player.h)){ bullets.splice(i,1); } }
     else if(player.shield > 0){ if(rectHit(b.x-3,b.y-6,6,12,player.x,player.y,player.w,player.h)){ player.shield--; spawnParticles(b.x,b.y,'#88ddff',6,1); bullets.splice(i,1); sfx('hit'); } }
-    else if(rectHit(b.x-3,b.y-6,6,12,player.x,player.y,player.w,player.h)){ player.lives--; spawnParticles(player.x,player.y,'#ff4081',12,2); bullets.splice(i,1); if(player.lives<=0){ endGame(); } else { respawnPlayer(); } }
+    else if(rectHit(b.x-3,b.y-6,6,12,player.x,player.y,player.w,player.h)){ player.lives--; spawnParticles(player.x,player.y,'#ff4081',12,2); bullets.splice(i,1); if(player.lives<=0){ endGame(); return; } else { respawnPlayer(); } }
     else if(b.y > H) bullets.splice(i,1);
   }
 
@@ -235,7 +235,7 @@ function loop(){ if(!running) return; frame++; drawBackground(); const W = cvs.w
     if(rectHit(player.x,player.y,player.w,player.h,activeBoss.x,activeBoss.y,activeBoss.w,activeBoss.h)){ if(player.invul<=0){ player.lives--; player.invul=120; if(player.lives<=0) endGame(); } }
   }
 
-  // respawn allies with improved movement
+  // respawn allies
   if(!aiAlpha.alive){ aiAlpha.respawn--; if(aiAlpha.respawn<=0){ aiAlpha.alive=true; aiAlpha.x = player.x; aiAlpha.moveTimer=0; } }
   if(!aiBeta.alive && shopOwned.includes('cheat_drone')){ aiBeta.respawn--; if(aiBeta.respawn<=0){ aiBeta.alive=true; aiBeta.x = player.x+40; aiBeta.moveTimer=0; } }
   if(!aiGamma.alive && shopOwned.includes('cheat_drone')){ aiGamma.respawn--; if(aiGamma.respawn<=0){ aiGamma.alive=true; aiGamma.x = player.x-40; aiGamma.moveTimer=0; } }
@@ -243,7 +243,7 @@ function loop(){ if(!running) return; frame++; drawBackground(); const W = cvs.w
   if(comboTimer>0) comboTimer--; else multiplier = Math.max(1, multiplier - 0.03);
   if(frame % 120 === 0){ localStorage.setItem(SHOP_KEYS.XP, String(playerXP)); localStorage.setItem(SHOP_KEYS.POINTS, String(shopPoints)); localStorage.setItem(SHOP_KEYS.LEVEL, String(playerLevel)); }
 
-  updateHUD(); if(!isOver) requestAnimationFrame(loop);
+  updateHUD(); requestAnimationFrame(loop);
 }
 
 // ----------------------------- Drawing & AI Improvements -----------------------------
@@ -262,7 +262,7 @@ function drawPlayer(pl){ ctx.save(); if(pl.invul>0) ctx.globalAlpha = 0.6 + Math
 function aiTick(ai,accuracy=1,splitShot=false,single=false){ if(!ai.alive) return; const W = cvs.width/(window.devicePixelRatio||1); const targets = activeBoss? [activeBoss] : (asteroids.length ? asteroids : enemies); 
   let target = targets.length ? targets[Math.floor(Math.random()*targets.length)] : null;
   
-  // Improved movement: prevent getting stuck, add random direction changes
+  // Improved movement: prevent getting stuck
   ai.moveTimer++; if(ai.moveTimer > 80 || ai.x < 10 || ai.x > W - ai.w - 10){ ai.moveDir *= -1; ai.moveTimer = 0; }
   ai.x += ai.speed * ai.moveDir;
   ai.x = Math.max(0, Math.min(W - ai.w, ai.x));
@@ -298,7 +298,6 @@ function openLeaderboard(){ overlay.style.display='flex'; const board = JSON.par
 
 function toggleFullscreen(){ if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); }
 
-// ----------------------------- Scoring & Save ----------------------------- 
 function calcLevel(xp){ return Math.floor(1 + Math.pow(xp, 0.45)); }
 
 function saveScore(){ playerLevel = calcLevel(playerXP); const name = (shopUser && shopUser.name) ? shopUser.name : 'Guest'; shopPoints += Math.floor(score / 50); 
@@ -309,15 +308,12 @@ function saveScore(){ playerLevel = calcLevel(playerXP); const name = (shopUser 
 
 function shareScore(){ const text = `I scored ${score} in Cosmic Dodger! Can you beat me? Level ${playerLevel} ⭐`; if(navigator.share){ navigator.share({ title:'Cosmic Dodger Premium', text }); } else { navigator.clipboard.writeText(text); alert('Copied to clipboard!'); } }
 
-// ----------------------------- Daily Reward --------------------
 function claimDaily(){ const last = Number(localStorage.getItem('dodger_last_daily') || 0); const now = Date.now(); if(now - last < 24*3600*1000){ const hours = Math.floor((24*3600*1000 - (now - last))/3600000); alert(`Daily already claimed. Return in ${hours}h!`); return; } shopPoints += 500; localStorage.setItem(SHOP_KEYS.POINTS, String(shopPoints)); localStorage.setItem('dodger_last_daily', String(now)); alert('Claimed 500 credits! 🎁'); openShop(); }
 
-// ----------------------------- User Setup --------------------
 function setUser(name){ shopUser = { name:name||'Guest', source:'local' }; localStorage.setItem(SHOP_KEYS.USER, JSON.stringify(shopUser)); window.dodgerUser = shopUser; updateHUD(); }
 
 if(!shopUser){ setTimeout(()=>{ const name = prompt('Choose a player name (optional):','Player'); if(name) setUser(name); },400); }
 
-// ----------------------------- Misc --------------------
 window.syncDodgerOwned = applyShopOwned;
 document.addEventListener('keydown', (e)=>{ if(e.key==='d' || e.key==='D'){ claimDaily(); } });
 window.addEventListener('pointerdown', ()=>{ try{ ensureAudio(); if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} },{once:true});
