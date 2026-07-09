@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cosmic Dodger — Premium</title>
+  <title>Dodger</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root{--bg:#04040a;--panel:#0f1222;--accent:#ff4081;--accent2:#00e6b8;--muted:#9aa3b2;--gold:#ffd700;--cyber:#00ffff;--neon-pink:#ff00ff}
@@ -98,18 +98,18 @@
 <script>
 // ======================== HIGH-TECH PERKS SYSTEM ========================
 const PERKS = {
-  rapid_fire: { name: 'Rapid Fire', cost: 150, desc: '↑30% fire rate permanently', category: 'weapon', effect: ()=>{ player.rate *= 0.7; } },
-  spread_shot: { name: 'Spread Shot', cost: 100, desc: 'Fire 3 projectiles at once', category: 'weapon', tempDuration: 12000 },
+  rapid_fire: { name: 'Rapid Fire', cost: 1500, desc: '↑30% fire rate permanently', category: 'weapon', effect: ()=>{ player.rate *= 0.7; } },
+  spread_shot: { name: 'Spread Shot', cost: 5000, desc: 'Fire 3 projectiles at once', category: 'weapon', tempDuration: 12000 },
   shield_gen: { name: 'Shield Generator', cost: 120, desc: 'Absorb 3 hits', category: 'defense', effect: ()=>{ player.shield = 3; } },
-  laser_cannon: { name: 'Laser Cannon', cost: 200, desc: '↑Damage output by 50%', category: 'weapon', effect: ()=>{ player.dmg = 1.5; } },
-  time_slow: { name: 'Chrono Matrix', cost: 180, desc: 'Slow time for 8 sec', category: 'utility', tempDuration: 8000, effect: ()=>{ timeSlowActive = true; } },
-  emp_burst: { name: 'EMP Burst', cost: 160, desc: 'Stun enemies for 3 sec', category: 'utility', tempDuration: 3000 },
-  auto_shield: { name: 'Auto-Shield', cost: 140, desc: 'Auto-regen 1 shield/5 sec', category: 'defense', passive: true },
-  overdrive: { name: 'Overdrive', cost: 190, desc: '↑Speed & fire rate +40%', category: 'combat', tempDuration: 15000, effect: ()=>{ player.speed *= 1.4; player.rate *= 0.6; } },
-  quantum_split: { name: 'Quantum Split', cost: 210, desc: 'Clone projectiles in flight', category: 'weapon' },
-  targeting_ai: { name: 'Targeting A.I.', cost: 170, desc: 'Auto-aim + ↑accuracy 30%', category: 'support', passive: true },
-  energy_shield: { name: 'Energy Shield', cost: 155, desc: 'Reflect 50% of incoming fire', category: 'defense', passive: true },
-  phase_shift: { name: 'Phase Shift', cost: 185, desc: 'Become invulnerable for 6 sec', category: 'defense', tempDuration: 6000, effect: ()=>{ player.invul = 360; } },
+  laser_cannon: { name: 'Laser Cannon', cost: 2000, desc: '↑Damage output by 50%', category: 'weapon', effect: ()=>{ player.dmg = 1.5; } },
+  time_slow: { name: 'Chrono Matrix', cost: 1800, desc: 'Slow time for 8 sec', category: 'utility', tempDuration: 8000, effect: ()=>{ timeSlowActive = true; } },
+  emp_burst: { name: 'Burst', cost: 1600, desc: 'Stun enemies for 3 sec', category: 'utility', tempDuration: 3000 },
+  auto_shield: { name: 'Auto-Shield', cost: 1400, desc: 'Auto-regen 1 shield/5 sec', category: 'defense', passive: true },
+  overdrive: { name: 'Overdrive', cost: 1090, desc: '↑Speed & fire rate +40%', category: 'combat', tempDuration: 15000, effect: ()=>{ player.speed *= 1.4; player.rate *= 0.6; } },
+  quantum_split: { name: 'Quantum Split', cost: 2190, desc: 'Clone projectiles in flight', category: 'weapon' },
+  targeting_ai: { name: 'Targeting A.I.', cost: 1790, desc: 'Auto-aim + ↑accuracy 300%', category: 'support', passive: true },
+  energy_shield: { name: 'Energy Shield', cost: 1595, desc: 'Reflect 50% of incoming fire', category: 'defense', passive: true },
+  phase_shift: { name: 'Phase Shift', cost: 1805, desc: 'Become invulnerable for 6 sec', category: 'defense', tempDuration: 6000, effect: ()=>{ player.invul = 360; } },
   cheat_drone: { name: 'Drone Squadron', cost: 200, desc: 'Unlock AI ally drones', category: 'secret', hidden: true }
 };
 
@@ -189,7 +189,7 @@ title.addEventListener('click',(e)=>{
   }
 });
 
-// ======================== Gameplay Helpers ========================
+
 function spawnAsteroid(){ const W = cvs.width/(window.devicePixelRatio||1); asteroids.push({ x: Math.random()*(W-40), y:-30-Math.random()*80, size:18+Math.random()*46, speed:(timeSlowActive?1.8:2.6)+Math.random()*3.2, spin:Math.random()*0.08-0.04, rot:0 }); }
 function spawnEnemy(){ const W = cvs.width/(window.devicePixelRatio||1); enemies.push({ x:Math.random()*(W-36), y:-20, size:18, hp: (chaosMode?4: DIFFICULTY.enemyHpBase + Math.floor(Math.random()*2)), speed:(timeSlowActive?1.2:(chaosMode?2.8:DIFFICULTY.enemySpeedBase)) + Math.random()*1.2, cooldown: 60+Math.random()*80 }); }
 function spawnPickup(x,y){ const types=['rapid','shield','spread','bomb','score','homing','energy']; const t=types[Math.floor(Math.random()*types.length)]; pickups.push({ x,y,type:t,vy:1.2,t:t }); }
